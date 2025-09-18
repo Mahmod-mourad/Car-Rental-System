@@ -14,6 +14,26 @@ const TestimonialsSection = dynamic(() => import('@/components/testimonials/Test
 const FAQSection = dynamic(() => import('@/components/faq/FAQSection'), { ssr: false });
 
 export default function HomeClient() {
+  // Animation variants for better performance and consistency
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+    },
+  };
+
   const featuredCars = [
     {
       id: 1,
@@ -103,24 +123,49 @@ export default function HomeClient() {
               </div>
               
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-8">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">+500</div>
+              <motion.div
+                className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-8"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.div
+                  className="text-center group cursor-pointer"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="text-3xl font-bold text-primary group-hover:text-blue-600 transition-colors duration-300">+500</div>
                   <div className="text-sm text-muted-foreground">سيارة</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">+10,000</div>
+                </motion.div>
+                <motion.div
+                  className="text-center group cursor-pointer"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="text-3xl font-bold text-primary group-hover:text-blue-600 transition-colors duration-300">+10,000</div>
                   <div className="text-sm text-muted-foreground">عميل راضٍ</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">24/7</div>
+                </motion.div>
+                <motion.div
+                  className="text-center group cursor-pointer"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="text-3xl font-bold text-primary group-hover:text-blue-600 transition-colors duration-300">24/7</div>
                   <div className="text-sm text-muted-foreground">خدمة عملاء</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary">100%</div>
+                </motion.div>
+                <motion.div
+                  className="text-center group cursor-pointer"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="text-3xl font-bold text-primary group-hover:text-blue-600 transition-colors duration-300">100%</div>
                   <div className="text-sm text-muted-foreground">تأمين شامل</div>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </motion.div>
             
             <motion.div 
