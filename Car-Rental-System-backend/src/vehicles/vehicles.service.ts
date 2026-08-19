@@ -117,11 +117,14 @@ export class VehiclesService {
     if (location) {
       const { lat, lng, radiusKm = 50 } = location;
       if (lat && lng) {
-        // Using PostGIS ST_DWithin for distance search
-        query.andWhere(
+        // Radius search against the vehicle's PostGIS point. Casting to geography
+        // makes ST_DWithin measure in metres on the spheroid rather than in degrees.
+        // The vehicles table has no latitude/longitude columns — the coordinates live
+        // in the `location` geometry column, which is what this reads.
+        query.andWhere('vehicle.location IS NOT NULL').andWhere(
           `ST_DWithin(
-            ST_MakePoint(vehicle.longitude, vehicle.latitude)::geography,
-            ST_MakePoint(:lng, :lat)::geography,
+            vehicle.location::geography,
+            ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
             :radius * 1000
           )`,
           { lng, lat, radius: radiusKm }
