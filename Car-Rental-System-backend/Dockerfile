@@ -1,4 +1,4 @@
-# Build stage — needs dev dependencies to compile TypeScript.
+# Build stage — dev dependencies are needed to compile TypeScript.
 FROM node:20-alpine AS build
 WORKDIR /app
 
@@ -14,13 +14,15 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
-# The migration scripts run through ts-node, so the dev dependencies stay.
+# The migration and seed scripts run through ts-node against the TypeScript
+# sources, so the dev dependencies stay in the runtime image.
 RUN npm ci && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
-COPY src/database/migrations ./src/database/migrations
-COPY src/config ./src/config
-COPY src/database/entities ./src/database/entities
+# The whole source tree, not a hand-picked list of folders. Migrations and the
+# seed import entities, config and shared types, and cherry-picking directories
+# breaks the moment one of them imports something new.
+COPY --from=build /app/src ./src
 COPY tsconfig.json ./
 
 # Run as the image's non-root user rather than root.

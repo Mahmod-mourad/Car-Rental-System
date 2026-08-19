@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThanOrEqual, Repository } from 'typeorm';
 import { createPoint } from '../common/types/postgis.types';
 import { Vehicle, VehicleType } from '../database/entities/vehicle.entity';
 import { User, UserRole } from '../database/entities/user.entity';
