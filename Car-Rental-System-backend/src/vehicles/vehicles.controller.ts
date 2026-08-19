@@ -154,6 +154,12 @@ export class VehiclesController {
     @Query('lat') lat?: number,
     @Query('lng') lng?: number,
     @Query('radiusKm', new DefaultValuePipe(50), ParseIntPipe) radiusKm?: number,
+    @Query('transmission') transmission?: string,
+    @Query('fuelType') fuelType?: string,
+    @Query('minSeats') minSeats?: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
   ) {
@@ -168,6 +174,16 @@ export class VehiclesController {
       minRating: minRating ? Math.min(5, Math.max(1, Number(minRating))) : undefined,
       isFeatured: isFeatured ? isFeatured.toLowerCase() === 'true' : undefined,
       available,
+      transmission,
+      fuelType,
+      minSeats: minSeats ? Number(minSeats) : undefined,
+      search,
+      // Anything outside the four sortable columns falls back to the default rather
+      // than reaching the query builder.
+      sortBy: (['price', 'rating', 'year', 'name'] as const).includes(sortBy as never)
+        ? (sortBy as SearchFilters['sortBy'])
+        : undefined,
+      sortOrder: sortOrder === 'desc' ? 'desc' : 'asc',
       page,
       limit,
     };

@@ -30,6 +30,13 @@ export interface AuthResult {
   user: AuthenticatedUser;
 }
 
+export interface UserProfile extends AuthenticatedUser {
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  created_at: Date;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -37,6 +44,8 @@ export class AuthService {
     private readonly dataSource: DataSource,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Profile)
+    private readonly profilesRepository: Repository<Profile>,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResult> {
@@ -105,6 +114,49 @@ export class AuthService {
     await this.usersRepository.update(user.id, { last_login: new Date() });
 
     return this.issueToken(user);
+  }
+
+  /** The signed-in user together with the profile fields the account page edits. */
+  async getProfile(userId: string): Promise<UserProfile> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Account no longer exists');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      first_name: user.profile?.first_name ?? null,
+      last_name: user.profile?.last_name ?? null,
+      phone: user.profile?.phone ?? null,
+      created_at: user.created_at,
+    };
+  }
+
+  async updateProfile(
+    userId: string,
+    changes: { first_name?: string; last_name?: string; phone?: string },
+  ): Promise<UserProfile> {
+    const profile = await this.profilesRepository.findOne({ where: { user_id: userId } });
+
+    if (!profile) {
+      throw new UnauthorizedException('Account no longer exists');
+    }
+
+    // Only these three fields. Email and role are not editable from here — changing
+    // your own role would be a straight privilege escalation.
+    if (changes.first_name !== undefined) profile.first_name = changes.first_name || null;
+    if (changes.last_name !== undefined) profile.last_name = changes.last_name || null;
+    if (changes.phone !== undefined) profile.phone = changes.phone || null;
+
+    await this.profilesRepository.save(profile);
+
+    return this.getProfile(userId);
   }
 
   private dummyHashCache?: string;

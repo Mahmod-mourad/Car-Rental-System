@@ -93,6 +93,18 @@ export class CreateVehicleDto {
   @Min(0)
   mileage?: number;
 
+  @ApiPropertyOptional({ example: 4 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  doors?: number;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  air_conditioning?: boolean;
+
   @ApiPropertyOptional({ example: 'Cairo International Airport' })
   @IsOptional()
   @IsString()

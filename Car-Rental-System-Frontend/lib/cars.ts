@@ -20,6 +20,8 @@ export interface Car {
   description: string | null
   color: string | null
   mileage: number | null
+  doors: number | null
+  airConditioning: boolean
   features: string[]
   images: string[]
   transmission: Transmission
@@ -37,6 +39,13 @@ export interface Car {
 export interface CarFilters {
   make?: string
   model?: string
+  /** One box searched across make and model. */
+  search?: string
+  transmission?: Transmission
+  fuelType?: FuelType
+  minSeats?: number
+  sortBy?: "price" | "rating" | "year" | "name"
+  sortOrder?: "asc" | "desc"
   category?: CarCategory
   minPrice?: number
   maxPrice?: number
@@ -88,6 +97,8 @@ interface ApiVehicle {
   description: string | null
   color: string | null
   mileage: number | null
+  doors: number | null
+  air_conditioning: boolean
   location_name: string | null
   average_rating: string | number
   review_count: number
@@ -124,6 +135,8 @@ export function mapVehicleToCar(vehicle: ApiVehicle): Car {
     description: vehicle.description,
     color: vehicle.color,
     mileage: vehicle.mileage,
+    doors: vehicle.doors,
+    airConditioning: vehicle.air_conditioning ?? true,
     features: vehicle.features ?? [],
     images: vehicle.images ?? [],
     transmission: vehicle.transmission,
@@ -151,6 +164,8 @@ export interface CreateCarInput {
   description?: string
   color?: string
   mileage?: number
+  doors?: number
+  airConditioning?: boolean
   location?: string
   features?: string[]
   images?: string[]
@@ -176,6 +191,8 @@ function toApiVehiclePayload(input: Partial<CreateCarInput>) {
   set("description", input.description)
   set("color", input.color)
   set("mileage", input.mileage)
+  set("doors", input.doors)
+  if (input.airConditioning !== undefined) payload.air_conditioning = input.airConditioning
   set("location_name", input.location)
   set("features", input.features)
   set("images", input.images)
@@ -210,6 +227,12 @@ class CarsService {
         minRating: filters.minRating,
         available: filters.available,
         isFeatured: filters.isFeatured,
+        search: filters.search,
+        transmission: filters.transmission,
+        fuelType: filters.fuelType,
+        minSeats: filters.minSeats,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
         lat: filters.lat,
         lng: filters.lng,
         radiusKm: filters.lat && filters.lng ? filters.radiusKm : undefined,
@@ -326,3 +349,28 @@ class CarsService {
 
 export const carsService = new CarsService()
 export { CATEGORY_LABELS }
+
+/**
+ * Option lists for the admin forms. The value is what the API stores; the label is
+ * what the form shows. Previously the forms sent their Arabic labels straight to
+ * the API, which only accepts these enum values.
+ */
+export const CATEGORY_OPTIONS: { value: CarCategory; label: string }[] = [
+  { value: "sedan", label: "سيدان" },
+  { value: "suv", label: "دفع رباعي" },
+  { value: "luxury", label: "فاخرة" },
+  { value: "van", label: "فان" },
+  { value: "truck", label: "شاحنة" },
+]
+
+export const TRANSMISSION_OPTIONS: { value: Transmission; label: string }[] = [
+  { value: "automatic", label: "أوتوماتيك" },
+  { value: "manual", label: "يدوي" },
+]
+
+export const FUEL_OPTIONS: { value: FuelType; label: string }[] = [
+  { value: "gasoline", label: "بنزين" },
+  { value: "diesel", label: "ديزل" },
+  { value: "electric", label: "كهربائي" },
+  { value: "hybrid", label: "هجين" },
+]

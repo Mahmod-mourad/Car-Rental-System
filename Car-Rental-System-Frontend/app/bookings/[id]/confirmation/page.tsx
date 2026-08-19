@@ -138,7 +138,7 @@ export default function BookingConfirmationPage() {
                         <div>
                           <p className="font-medium">مواقع الاستلام والتسليم</p>
                           <p className="text-sm text-muted-foreground">الاستلام: {booking.pickupLocation}</p>
-                          <p className="text-sm text-muted-foreground">التسليم: {booking.dropoffLocation}</p>
+                          <p className="text-sm text-muted-foreground">التسليم: {booking.returnLocation}</p>
                         </div>
                       </div>
                     </div>
@@ -150,17 +150,6 @@ export default function BookingConfirmationPage() {
                     <CardTitle>تفاصيل التكلفة</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span>المجموع الفرعي</span>
-                      <span>{booking.subtotal} ريال</span>
-                    </div>
-
-                    {booking.discountAmount > 0 && (
-                      <div className="flex justify-between text-blue-600">
-                        <span>الخصم</span>
-                        <span>-{booking.discountAmount} ريال</span>
-                      </div>
-                    )}
 
                     <Separator />
                     <div className="flex justify-between text-lg font-semibold">

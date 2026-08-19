@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, FileText, Tag, CreditCard } from "lucide-react"
 import { carsService, type Car } from "@/lib/cars"
 import { bookingsService, type CreateBookingData } from "@/lib/bookings"
-import { paymentsService, type PriceCalculation } from "@/lib/payments"
+
 
 export default function BookCarPage() {
   const params = useParams()
@@ -31,21 +31,20 @@ export default function BookCarPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
-  const [priceCalculation, setPriceCalculation] = useState<PriceCalculation | null>(null)
+  // A preview so the form can show a running total. The booking's real price is
+  // calculated by the API from the vehicle's stored rate — this number is never
+  // sent anywhere.
+  const [estimatedTotal, setEstimatedTotal] = useState<number | null>(null)
 
   const [formData, setFormData] = useState<CreateBookingData>({
     carId,
     startDate: "",
     endDate: "",
     pickupLocation: "",
-    dropoffLocation: "",
+    returnLocation: "",
     driverLicense: "",
-    additionalNotes: "",
-    discountCode: "",
+    notes: "",
   })
-
-  const [discountLoading, setDiscountLoading] = useState(false)
-  const [discountApplied, setDiscountApplied] = useState(false)
 
   useEffect(() => {
     const loadCar = async () => {
@@ -70,21 +69,19 @@ export default function BookCarPage() {
     }
   }, [formData.startDate, formData.endDate, car])
 
-  const calculatePrice = async () => {
+  const calculatePrice = () => {
     if (!formData.startDate || !formData.endDate || !car) return
 
     const startDate = new Date(formData.startDate)
     const endDate = new Date(formData.endDate)
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
 
-    if (totalDays <= 0) return
+    if (totalDays <= 0) {
+      setEstimatedTotal(null)
+      return
+    }
 
-    const subtotal = totalDays * car.pricePerDay
-    setPriceCalculation({
-      subtotal,
-      discountAmount: 0,
-      totalAmount: subtotal,
-    })
+    setEstimatedTotal(totalDays * car.pricePerDay)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -92,40 +89,7 @@ export default function BookCarPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const applyDiscount = async () => {
-    if (!formData.discountCode.trim()) return
 
-    setDiscountLoading(true)
-    try {
-      const validation = await paymentsService.validateDiscount(formData.discountCode)
-      if (validation.valid && priceCalculation) {
-        const discountAmount = (priceCalculation.subtotal * validation.discountPercentage) / 100
-        setPriceCalculation({
-          ...priceCalculation,
-          discountAmount,
-          totalAmount: priceCalculation.subtotal - discountAmount,
-          discountPercentage: validation.discountPercentage,
-        })
-        setDiscountApplied(true)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "كود الخصم غير صحيح")
-    } finally {
-      setDiscountLoading(false)
-    }
-  }
-
-  const removeDiscount = () => {
-    if (priceCalculation) {
-      setPriceCalculation({
-        subtotal: priceCalculation.subtotal,
-        discountAmount: 0,
-        totalAmount: priceCalculation.subtotal,
-      })
-    }
-    setFormData((prev) => ({ ...prev, discountCode: "" }))
-    setDiscountApplied(false)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -291,14 +255,14 @@ export default function BookCarPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="dropoffLocation">مكان التسليم</Label>
+                        <Label htmlFor="returnLocation">مكان التسليم</Label>
                         <div className="relative">
                           <MapPin className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
-                            id="dropoffLocation"
-                            name="dropoffLocation"
+                            id="returnLocation"
+                            name="returnLocation"
                             placeholder="أدخل مكان التسليم"
-                            value={formData.dropoffLocation}
+                            value={formData.returnLocation}
                             onChange={handleInputChange}
                             className="pr-10"
                             required
@@ -326,54 +290,18 @@ export default function BookCarPage() {
 
                     {/* Additional Notes */}
                     <div className="space-y-2">
-                      <Label htmlFor="additionalNotes">ملاحظات إضافية (اختياري)</Label>
+                      <Label htmlFor="notes">ملاحظات إضافية (اختياري)</Label>
                       <Textarea
-                        id="additionalNotes"
-                        name="additionalNotes"
+                        id="notes"
+                        name="notes"
                         placeholder="أي ملاحظات أو طلبات خاصة"
-                        value={formData.additionalNotes}
+                        value={formData.notes}
                         onChange={handleInputChange}
                         rows={3}
                       />
                     </div>
 
-                    {/* Discount Code */}
-                    <div className="space-y-2">
-                      <Label htmlFor="discountCode">كود الخصم (اختياري)</Label>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Tag className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="discountCode"
-                            name="discountCode"
-                            placeholder="أدخل كود الخصم"
-                            value={formData.discountCode}
-                            onChange={handleInputChange}
-                            className="pr-10"
-                            disabled={discountApplied}
-                          />
-                        </div>
-                        {!discountApplied ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={applyDiscount}
-                            disabled={!formData.discountCode.trim() || discountLoading}
-                          >
-                            {discountLoading ? "جاري التحقق..." : "تطبيق"}
-                          </Button>
-                        ) : (
-                          <Button type="button" variant="outline" onClick={removeDiscount}>
-                            إزالة
-                          </Button>
-                        )}
-                      </div>
-                      {discountApplied && priceCalculation?.discountPercentage && (
-                        <p className="text-sm text-blue-600">تم تطبيق خصم {priceCalculation.discountPercentage}%</p>
-                      )}
-                    </div>
-
-                    <Button type="submit" className="w-full" size="lg" disabled={submitting || !priceCalculation}>
+                    <Button type="submit" className="w-full" size="lg" disabled={submitting || !estimatedTotal}>
                       {submitting ? "جاري إنشاء الحجز..." : "متابعة للدفع"}
                     </Button>
                   </form>
@@ -408,7 +336,7 @@ export default function BookCarPage() {
               </Card>
 
               {/* Price Summary */}
-              {priceCalculation && totalDays > 0 && (
+              {estimatedTotal && totalDays > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -427,20 +355,13 @@ export default function BookCarPage() {
                     </div>
                     <div className="flex justify-between">
                       <span>المجموع الفرعي</span>
-                      <span>{priceCalculation.subtotal} ريال</span>
+                      <span>{estimatedTotal} ريال</span>
                     </div>
-
-                    {priceCalculation.discountAmount > 0 && (
-                      <div className="flex justify-between text-blue-600">
-                        <span>الخصم</span>
-                        <span>-{priceCalculation.discountAmount} ريال</span>
-                      </div>
-                    )}
 
                     <Separator />
                     <div className="flex justify-between text-lg font-semibold">
                       <span>المجموع الكلي</span>
-                      <span className="text-primary">{priceCalculation.totalAmount} ريال</span>
+                      <span className="text-primary">{estimatedTotal} ريال</span>
                     </div>
                   </CardContent>
                 </Card>

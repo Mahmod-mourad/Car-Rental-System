@@ -7,6 +7,9 @@ import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { subMonths } from 'date-fns';
 
+export type VehicleSortField = 'price' | 'rating' | 'year' | 'name'
+export type SortDirection = 'asc' | 'desc'
+
 export interface SearchFilters {
   make?: string;
   model?: string;
@@ -18,6 +21,12 @@ export interface SearchFilters {
   minRating?: number;
   isFeatured?: boolean;
   available?: boolean;
+  transmission?: string;
+  fuelType?: string;
+  minSeats?: number;
+  search?: string;
+  sortBy?: VehicleSortField;
+  sortOrder?: SortDirection;
   location?: {
     lat: number;
     lng: number;
@@ -71,6 +80,12 @@ export class VehiclesService {
       minRating,
       isFeatured,
       available,
+      transmission,
+      fuelType,
+      minSeats,
+      search,
+      sortBy = 'name',
+      sortOrder = 'asc',
       location,
       page = 1,
       limit = 10
@@ -123,6 +138,26 @@ export class VehiclesService {
       query.andWhere('vehicle.is_featured = :isFeatured', { isFeatured });
     }
 
+    if (transmission) {
+      query.andWhere('vehicle.transmission = :transmission', { transmission });
+    }
+
+    if (fuelType) {
+      query.andWhere('vehicle.fuel_type = :fuelType', { fuelType });
+    }
+
+    if (minSeats !== undefined) {
+      query.andWhere('vehicle.seats >= :minSeats', { minSeats });
+    }
+
+    if (search) {
+      // One box over make and model, which is what the search field on the UI does.
+      query.andWhere(
+        '(LOWER(vehicle.make) LIKE LOWER(:search) OR LOWER(vehicle.model) LIKE LOWER(:search))',
+        { search: `%${search}%` },
+      );
+    }
+
     if (location) {
       const { lat, lng, radiusKm = 50 } = location;
       if (lat && lng) {
@@ -141,7 +176,20 @@ export class VehiclesService {
       }
     }
 
+    // Only these four columns can be sorted on. Passing the query parameter
+    // straight into orderBy would let a caller name any column, or inject SQL.
+    const sortColumns: Record<VehicleSortField, string> = {
+      price: 'vehicle.price_per_day',
+      rating: 'vehicle.average_rating',
+      year: 'vehicle.year',
+      name: 'vehicle.make',
+    };
+
+    const sortColumn = sortColumns[sortBy] ?? sortColumns.name;
+    const direction = sortOrder === 'desc' ? 'DESC' : 'ASC';
+
     const [data, count] = await query
+      .orderBy(sortColumn, direction)
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();

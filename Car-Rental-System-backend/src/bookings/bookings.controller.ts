@@ -21,7 +21,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../database/entities/user.entity';
-import { Booking, BookingStatus } from '../database/entities/booking.entity';
+import { Booking, BookingStatus, BookingPaymentStatus } from '../database/entities/booking.entity';
 
 @ApiTags('Bookings')
 @Controller('bookings')
@@ -52,6 +52,7 @@ export class BookingsController {
     @Query('userId') userId?: string,
     @Query('vehicleId') vehicleId?: string,
     @Query('status') status?: BookingStatus,
+    @Query('paymentStatus') paymentStatus?: BookingPaymentStatus,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
@@ -61,6 +62,7 @@ export class BookingsController {
       userId,
       vehicleId,
       status,
+      paymentStatus,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
       page,
@@ -70,10 +72,32 @@ export class BookingsController {
   }
 
   @Get('my-bookings')
-  @ApiOperation({ summary: 'Get current user\'s bookings' })
+  @ApiOperation({ summary: "Get the signed-in user's bookings" })
   @ApiResponse({ status: 200, description: 'Return list of user bookings', type: [Booking] })
-  findUserBookings(@Req() req) {
-    return this.bookingsService.getUserBookings(req.user.userId);
+  @ApiQuery({ name: 'status', required: false, enum: BookingStatus })
+  @ApiQuery({ name: 'paymentStatus', required: false, enum: BookingPaymentStatus })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  findUserBookings(
+    @Req() req,
+    @Query('status') status?: BookingStatus,
+    @Query('paymentStatus') paymentStatus?: BookingPaymentStatus,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit = 10,
+  ) {
+    // The user id comes from the token, never from the query string, so these
+    // filters cannot be used to read someone else's bookings.
+    return this.bookingsService.findAll({
+      userId: req.user.userId,
+      status,
+      paymentStatus,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      page,
+      limit,
+    });
   }
 
   @Get('vehicle/:vehicleId')

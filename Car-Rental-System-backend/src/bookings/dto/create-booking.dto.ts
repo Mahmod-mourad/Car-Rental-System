@@ -26,4 +26,22 @@ export class CreateBookingDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Where the renter collects the vehicle' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  pickup_location?: string;
+
+  @ApiPropertyOptional({ description: 'Where the renter returns the vehicle' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  return_location?: string;
+
+  @ApiPropertyOptional({ description: "The renter's driving licence number" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  driver_license?: string;
 }

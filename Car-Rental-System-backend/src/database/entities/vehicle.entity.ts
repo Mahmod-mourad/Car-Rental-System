@@ -74,6 +74,12 @@ export class Vehicle {
   @Column({ type: 'int', nullable: true })
   mileage: number | null;
 
+  @Column({ type: 'int', nullable: true })
+  doors: number | null;
+
+  @Column({ type: 'boolean', default: true })
+  air_conditioning: boolean;
+
   /** Human-readable pickup point. The `location` column below is the PostGIS point. */
   @Column({ type: 'varchar', length: 200, nullable: true })
   location_name: string | null;

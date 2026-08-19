@@ -22,7 +22,15 @@ import {
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { addCarToStorage } from "@/lib/local-storage"
+import {
+  CATEGORY_OPTIONS,
+  FUEL_OPTIONS,
+  TRANSMISSION_OPTIONS,
+  carsService,
+  type CarCategory,
+  type FuelType,
+  type Transmission,
+} from "@/lib/cars"
 
 export default function NewCarPage() {
   const router = useRouter()
@@ -36,8 +44,6 @@ export default function NewCarPage() {
     fuelType: "",
     seats: "",
     pricePerDay: "",
-    pricePerWeek: "",
-    pricePerMonth: "",
     mileage: "",
     color: "",
     description: "",
@@ -49,28 +55,6 @@ export default function NewCarPage() {
 
   const [newFeature, setNewFeature] = useState("")
   const [newImage, setNewImage] = useState("")
-
-  const categories = [
-    "اقتصادية",
-    "عائلية", 
-    "رياضية",
-    "فاخرة",
-    "SUV",
-    "فان",
-    "شاحنة"
-  ]
-
-  const transmissions = [
-    "أوتوماتيك",
-    "يدوي"
-  ]
-
-  const fuelTypes = [
-    "بنزين",
-    "ديزل", 
-    "كهربائي",
-    "هجين"
-  ]
 
   const colors = [
     "أبيض",
@@ -138,7 +122,7 @@ export default function NewCarPage() {
 
     try {
       // Validate required fields
-      const requiredFields = ['brand', 'model', 'year', 'category', 'pricePerDay']
+      const requiredFields = ['brand', 'model', 'year', 'category', 'transmission', 'fuelType', 'pricePerDay']
       const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData])
       
       if (missingFields.length > 0) {
@@ -150,39 +134,24 @@ export default function NewCarPage() {
         return
       }
 
-      // Create new car object
-      const newCar: StaticCar = {
-        id: `car_${Date.now()}`,
-        name: `${formData.brand} ${formData.model} ${formData.year}`,
+      await carsService.createCar({
         brand: formData.brand,
         model: formData.model,
-        year: parseInt(formData.year),
-        category: formData.category,
-        categoryId: formData.category.toLowerCase().replace(/\s+/g, '_'),
-        pricePerDay: parseInt(formData.pricePerDay),
-        pricePerWeek: formData.pricePerWeek ? parseInt(formData.pricePerWeek) : undefined,
-        pricePerMonth: formData.pricePerMonth ? parseInt(formData.pricePerMonth) : undefined,
-        description: formData.description,
+        year: Number.parseInt(formData.year, 10),
+        category: formData.category as CarCategory,
+        transmission: formData.transmission as Transmission,
+        fuelType: formData.fuelType as FuelType,
+        seats: formData.seats ? Number.parseInt(formData.seats, 10) : 5,
+        pricePerDay: Number.parseFloat(formData.pricePerDay),
+        description: formData.description || undefined,
+        color: formData.color || undefined,
+        mileage: formData.mileage ? Number.parseInt(formData.mileage, 10) : undefined,
+        location: formData.location || undefined,
         features: formData.features,
         images: formData.images,
         isAvailable: formData.isAvailable,
-        status: "available",
-        transmission: formData.transmission || undefined,
-        fuelType: formData.fuelType || undefined,
-        seats: formData.seats ? parseInt(formData.seats) : undefined,
-        mileage: formData.mileage ? parseInt(formData.mileage) : undefined,
-        color: formData.color || undefined,
-        location: formData.location || undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+      })
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Save to localStorage
-      addCarToStorage(newCar)
-      
       toast({
         title: "تم إضافة السيارة بنجاح",
         description: "تم حفظ السيارة الجديدة في النظام",
@@ -294,9 +263,9 @@ export default function NewCarPage() {
                         <SelectValue placeholder="اختر الفئة" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {CATEGORY_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -309,9 +278,9 @@ export default function NewCarPage() {
                         <SelectValue placeholder="اختر ناقل الحركة" />
                       </SelectTrigger>
                       <SelectContent>
-                        {transmissions.map((transmission) => (
-                          <SelectItem key={transmission} value={transmission}>
-                            {transmission}
+                        {TRANSMISSION_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -324,9 +293,9 @@ export default function NewCarPage() {
                         <SelectValue placeholder="اختر نوع الوقود" />
                       </SelectTrigger>
                       <SelectContent>
-                        {fuelTypes.map((fuelType) => (
-                          <SelectItem key={fuelType} value={fuelType}>
-                            {fuelType}
+                        {FUEL_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -409,30 +378,6 @@ export default function NewCarPage() {
                       placeholder="200"
                       min="0"
                       required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pricePerWeek">السعر الأسبوعي</Label>
-                    <Input
-                      id="pricePerWeek"
-                      name="pricePerWeek"
-                      type="number"
-                      value={formData.pricePerWeek}
-                      onChange={handleInputChange}
-                      placeholder="1200"
-                      min="0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pricePerMonth">السعر الشهري</Label>
-                    <Input
-                      id="pricePerMonth"
-                      name="pricePerMonth"
-                      type="number"
-                      value={formData.pricePerMonth}
-                      onChange={handleInputChange}
-                      placeholder="4000"
-                      min="0"
                     />
                   </div>
                 </div>

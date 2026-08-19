@@ -129,7 +129,7 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
               {/* Brand Filter */}
               <div className="space-y-2">
                 <Label>الماركة</Label>
-                <Select value={filters.brand || "all"} onValueChange={(value) => handleFilterChange("brand", value)}>
+                <Select value={filters.make || "all"} onValueChange={(value) => handleFilterChange("make", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الماركة" />
                   </SelectTrigger>
@@ -209,8 +209,8 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
             <div className="space-y-2">
               <Label>عدد المقاعد</Label>
               <Select
-                value={filters.seats?.toString() || "all"}
-                onValueChange={(value) => handleFilterChange("seats", value ? Number.parseInt(value) : undefined)}
+                value={filters.minSeats?.toString() || "all"}
+                onValueChange={(value) => handleFilterChange("minSeats", value ? Number.parseInt(value) : undefined)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="عدد المقاعد" />

@@ -50,6 +50,15 @@ export class Booking {
   @Column({ type: 'varchar', length: 500, nullable: true })
   notes: string | null;
 
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  pickup_location: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  return_location: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  driver_license: string | null;
+
   @Column('timestamp')
   created_at: Date;
 

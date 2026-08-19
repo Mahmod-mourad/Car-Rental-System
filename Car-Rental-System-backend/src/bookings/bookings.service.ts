@@ -19,6 +19,7 @@ export interface BookingSearchOptions {
   userId?: string;
   vehicleId?: string;
   status?: BookingStatus;
+  paymentStatus?: BookingPaymentStatus;
   startDate?: Date;
   endDate?: Date;
   page?: number;
@@ -46,7 +47,15 @@ export class BookingsService {
   }
 
   async create(createBookingDto: CreateBookingDto, userId: string): Promise<Booking> {
-    const { vehicle_id, start_date, end_date, notes } = createBookingDto;
+    const {
+      vehicle_id,
+      start_date,
+      end_date,
+      notes,
+      pickup_location,
+      return_location,
+      driver_license,
+    } = createBookingDto;
 
     const startDate = new Date(start_date);
     const endDate = new Date(end_date);
@@ -114,6 +123,9 @@ export class BookingsService {
         end_date: endDate,
         total_price: totalPrice,
         notes: notes ?? null,
+        pickup_location: pickup_location ?? null,
+        return_location: return_location ?? null,
+        driver_license: driver_license ?? null,
         status: BookingStatus.PENDING,
         payment_status: BookingPaymentStatus.PENDING,
         user_id: userId,
@@ -173,6 +185,11 @@ export class BookingsService {
     if (vehicleId) {
       whereConditions.push('booking.vehicleId = :vehicleId');
       params.vehicleId = vehicleId;
+    }
+
+    if (filters.paymentStatus) {
+      whereConditions.push('booking.payment_status = :paymentStatus');
+      params.paymentStatus = filters.paymentStatus;
     }
 
     if (status) {
