@@ -42,10 +42,19 @@ export class VehiclesService {
       throw new NotFoundException('Owner not found');
     }
 
+    const { location, ...fields } = createVehicleDto;
+
     const vehicle = this.vehiclesRepository.create({
-      ...createVehicleDto,
+      ...fields,
       owner,
     });
+
+    // A {lat, lng} pair cannot be assigned to a geometry column directly — it has to
+    // go in as a PostGIS point, which is what the radius search reads.
+    if (location) {
+      vehicle.location = () =>
+        `ST_SetSRID(ST_MakePoint(${Number(location.lng)}, ${Number(location.lat)}), 4326)`;
+    }
 
     return this.vehiclesRepository.save(vehicle);
   }

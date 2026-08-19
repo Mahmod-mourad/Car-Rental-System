@@ -74,10 +74,21 @@ class AuthService {
       throw new Error("Backend server is not available")
     }
 
+    // The form collects one "name" field; the API stores a first and last name on
+    // the profile. Split on the first space and send what the API actually accepts —
+    // it rejects unknown properties, so passing `name` straight through would 400.
+    const [firstName, ...restOfName] = userData.name.trim().split(/\s+/)
+
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        email: userData.email,
+        password: userData.password,
+        first_name: firstName || undefined,
+        last_name: restOfName.length ? restOfName.join(" ") : undefined,
+        phone: userData.phone || undefined,
+      }),
     })
 
     if (!response.ok) {

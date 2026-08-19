@@ -11,6 +11,8 @@ import { Booking, BookingStatus, BookingPaymentStatus } from '../database/entiti
 import { Vehicle } from '../database/entities/vehicle.entity';
 import { User } from '../database/entities/user.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../database/entities/notification.entity';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 
 export interface BookingSearchOptions {
@@ -33,6 +35,7 @@ export class BookingsService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private dataSource: DataSource,
+    private notificationsService: NotificationsService,
   ) {}
 
   /** Whole days between the pickup day and the return day, minimum one. */
@@ -120,6 +123,19 @@ export class BookingsService {
       });
 
       const saved = await manager.save(Booking, booking);
+
+      // Written inside the same transaction: a booking that rolls back must not
+      // leave a notification behind saying it succeeded.
+      await this.notificationsService.create(
+        {
+          userId: userId,
+          type: NotificationType.BOOKING_CREATED,
+          title: 'Booking requested',
+          body: `Your booking for the ${vehicle.make} ${vehicle.model} from ${start_date} to ${end_date} is awaiting confirmation.`,
+          referenceId: saved.id,
+        },
+        manager,
+      );
 
       return manager.findOneOrFail(Booking, {
         where: { id: saved.id },

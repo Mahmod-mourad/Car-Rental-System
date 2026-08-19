@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
@@ -30,6 +31,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     VehiclesModule,
     BookingsModule,
     PaymentsModule,
+    NotificationsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

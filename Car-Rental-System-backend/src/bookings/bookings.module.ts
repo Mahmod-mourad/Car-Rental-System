@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BookingsService } from './bookings.service';
 import { BookingsController } from './bookings.controller';
@@ -9,7 +10,7 @@ import { VehiclesModule } from '../vehicles/vehicles.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
+  imports: [NotificationsModule, 
     TypeOrmModule.forFeature([Booking, Vehicle, User]),
     VehiclesModule,
     UsersModule,

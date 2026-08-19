@@ -65,6 +65,19 @@ export class Vehicle {
   @Column('decimal', { precision: 10, scale: 2 })
   price_per_day: number;
 
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  color: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  mileage: number | null;
+
+  /** Human-readable pickup point. The `location` column below is the PostGIS point. */
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  location_name: string | null;
+
   @Column('boolean', { default: true })
   available: boolean;
 
@@ -87,8 +100,9 @@ export class Vehicle {
   @Column('text', { array: true, default: [] })
   images: string[];
 
+  /** Feature labels shown on the vehicle card, e.g. ["GPS", "Bluetooth"]. */
   @Column('jsonb', { nullable: true })
-  features: Record<string, any>;
+  features: string[] | null;
 
   @Column('timestamp')
   created_at: Date;

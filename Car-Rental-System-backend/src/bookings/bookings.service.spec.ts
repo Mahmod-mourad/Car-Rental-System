@@ -5,6 +5,8 @@ import { DataSource } from 'typeorm';
 
 import { BookingsService } from './bookings.service';
 import { Booking, BookingPaymentStatus, BookingStatus } from '../database/entities/booking.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../database/entities/notification.entity';
 import { Vehicle } from '../database/entities/vehicle.entity';
 import { User } from '../database/entities/user.entity';
 
@@ -25,11 +27,13 @@ describe('BookingsService.create', () => {
   let conflictToReturn: Partial<Booking> | null;
   let vehicleToReturn: Partial<Vehicle> | null;
   let lockUsed: unknown;
+  let notificationsCreated: { input: Record<string, unknown>; manager: unknown }[];
 
   beforeEach(async () => {
     savedBooking = undefined;
     conflictToReturn = null;
     lockUsed = undefined;
+    notificationsCreated = [];
     vehicleToReturn = { id: VEHICLE_ID, price_per_day: 250, available: true } as Partial<Vehicle>;
 
     const queryBuilder = {
@@ -60,6 +64,15 @@ describe('BookingsService.create', () => {
         {
           provide: getRepositoryToken(User),
           useValue: { findOne: jest.fn(async () => ({ id: USER_ID })) },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            create: jest.fn(async (input: Record<string, unknown>, passedManager: unknown) => {
+              notificationsCreated.push({ input, manager: passedManager });
+              return {};
+            }),
+          },
         },
         {
           provide: DataSource,
@@ -170,6 +183,35 @@ describe('BookingsService.create', () => {
           USER_ID,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('records a notification inside the booking transaction', async () => {
+      await service.create(
+        { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(2) },
+        USER_ID,
+      );
+
+      expect(notificationsCreated).toHaveLength(1);
+      expect(notificationsCreated[0].input).toMatchObject({
+        userId: USER_ID,
+        type: NotificationType.BOOKING_CREATED,
+      });
+      // Passing the transaction manager is what keeps a rolled-back booking from
+      // leaving behind a notification saying it worked.
+      expect(notificationsCreated[0].manager).toBeDefined();
+    });
+
+    it('records no notification when the booking is rejected', async () => {
+      conflictToReturn = { id: 'existing-booking' };
+
+      await service
+        .create(
+          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(4) },
+          USER_ID,
+        )
+        .catch(() => null);
+
+      expect(notificationsCreated).toHaveLength(0);
     });
 
     it('reports a missing vehicle as not found', async () => {
