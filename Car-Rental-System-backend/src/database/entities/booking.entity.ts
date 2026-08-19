@@ -47,6 +47,9 @@ export class Booking {
   })
   payment_status: BookingPaymentStatus;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  notes: string | null;
+
   @Column('timestamp')
   created_at: Date;
 

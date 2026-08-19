@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { DataSource, Repository, Not } from 'typeorm';
 import { Booking, BookingStatus, BookingPaymentStatus } from '../database/entities/booking.entity';
 import { Vehicle } from '../database/entities/vehicle.entity';
 import { User } from '../database/entities/user.entity';
@@ -26,65 +32,99 @@ export class BookingsService {
     private vehiclesRepository: Repository<Vehicle>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private dataSource: DataSource,
   ) {}
 
+  /** Whole days between the pickup day and the return day, minimum one. */
+  private rentalDays(startDate: Date, endDate: Date): number {
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const days = Math.round((endDate.getTime() - startDate.getTime()) / msPerDay);
+    return Math.max(days, 1);
+  }
+
   async create(createBookingDto: CreateBookingDto, userId: string): Promise<Booking> {
-    const { vehicle_id, start_date, end_date, total_price, notes } = createBookingDto;
-    
-    // Check if the vehicle exists and is available
-    const vehicle = await this.vehiclesRepository.findOne({ where: { id: vehicle_id } });
-    if (!vehicle) {
-      throw new NotFoundException('Vehicle not found');
-    }
-    
-    if (!vehicle.available) {
-      throw new BadRequestException('Vehicle is not available for booking');
+    const { vehicle_id, start_date, end_date, notes } = createBookingDto;
+
+    const startDate = new Date(start_date);
+    const endDate = new Date(end_date);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new BadRequestException('start_date and end_date must be valid dates');
     }
 
-    // Verify the user exists
+    if (endDate <= startDate) {
+      throw new BadRequestException('end_date must be after start_date');
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (startDate < today) {
+      throw new BadRequestException('start_date cannot be in the past');
+    }
+
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    // Check for date conflicts
-    const existingBooking = await this.bookingsRepository
-      .createQueryBuilder('booking')
-      .where('booking.vehicle_id = :vehicleId', { vehicleId: vehicle_id })
-      .andWhere('booking.status != :cancelled', { cancelled: BookingStatus.CANCELLED })
-      .andWhere(
-        '(:startDate BETWEEN booking.start_date AND booking.end_date) OR ' +
-        '(:endDate BETWEEN booking.start_date AND booking.end_date) OR ' +
-        '(booking.start_date <= :startDate AND booking.end_date >= :endDate)'
-      )
-      .setParameters({
-        startDate: new Date(start_date),
-        endDate: new Date(end_date)
-      })
-      .getOne();
+    // Everything below runs in one transaction. The vehicle row is locked first, so
+    // two requests for the same vehicle are serialised: without the lock both could
+    // pass the overlap check before either had inserted its booking, and the vehicle
+    // would end up double-booked.
+    return this.dataSource.transaction(async (manager) => {
+      const vehicle = await manager.findOne(Vehicle, {
+        where: { id: vehicle_id },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-    if (existingBooking) {
-      throw new BadRequestException('The vehicle is already booked for the selected dates');
-    }
+      if (!vehicle) {
+        throw new NotFoundException('Vehicle not found');
+      }
 
-    // Create the booking
-    const booking = new Booking();
-    booking.start_date = new Date(start_date);
-    booking.end_date = new Date(end_date);
-    booking.total_price = total_price;
-    // Remove notes if it doesn't exist in the entity
-    // booking.notes = notes;
-    booking.status = BookingStatus.PENDING;
-    booking.payment_status = BookingPaymentStatus.PENDING;
-    booking.user = { id: userId } as User;
-    booking.vehicle = { id: vehicle_id } as Vehicle;
-    booking.created_at = new Date();
-    booking.updated_at = new Date();
+      if (!vehicle.available) {
+        throw new BadRequestException('Vehicle is not available for booking');
+      }
 
-    const savedBooking = await this.bookingsRepository.save(booking);
-    return this.bookingsRepository.findOneOrFail({
-      where: { id: savedBooking.id },
-      relations: ['user', 'vehicle']
+      const conflict = await manager
+        .createQueryBuilder(Booking, 'booking')
+        .where('booking.vehicle_id = :vehicleId', { vehicleId: vehicle_id })
+        .andWhere('booking.status != :cancelled', { cancelled: BookingStatus.CANCELLED })
+        // Two ranges overlap when each one starts before the other ends. Treating the
+        // return day as occupied means a same-day handover counts as a conflict.
+        .andWhere('booking.start_date <= :endDate AND booking.end_date >= :startDate', {
+          startDate,
+          endDate,
+        })
+        .getOne();
+
+      if (conflict) {
+        throw new ConflictException('The vehicle is already booked for the selected dates');
+      }
+
+      // The client does not get to name its own price. The total is derived from the
+      // vehicle's stored daily rate, so a tampered request cannot rent a car for zero.
+      const days = this.rentalDays(startDate, endDate);
+      const totalPrice = Number(vehicle.price_per_day) * days;
+
+      const booking = manager.create(Booking, {
+        start_date: startDate,
+        end_date: endDate,
+        total_price: totalPrice,
+        notes: notes ?? null,
+        status: BookingStatus.PENDING,
+        payment_status: BookingPaymentStatus.PENDING,
+        user_id: userId,
+        vehicle_id: vehicle_id,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      const saved = await manager.save(Booking, booking);
+
+      return manager.findOneOrFail(Booking, {
+        where: { id: saved.id },
+        relations: ['user', 'vehicle'],
+      });
     });
   }
 

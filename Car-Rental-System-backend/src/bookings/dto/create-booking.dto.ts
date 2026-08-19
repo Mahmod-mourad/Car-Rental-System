@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsNumber, IsString, IsUUID, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class CreateBookingDto {
   @ApiProperty({ description: 'ID of the vehicle to book' })
@@ -7,24 +7,23 @@ export class CreateBookingDto {
   @IsNotEmpty()
   vehicle_id: string;
 
-  @ApiProperty({ description: 'Start date of the booking (ISO 8601 format)' })
+  @ApiProperty({ description: 'First day of the rental (ISO 8601 date)' })
   @IsDateString()
   @IsNotEmpty()
   start_date: string;
 
-  @ApiProperty({ description: 'End date of the booking (ISO 8601 format)' })
+  @ApiProperty({ description: 'Return day of the rental (ISO 8601 date)' })
   @IsDateString()
   @IsNotEmpty()
   end_date: string;
 
-  @ApiProperty({ description: 'Total price for the booking' })
-  @IsNumber()
-  @Min(0)
-  total_price: number;
+  // total_price is deliberately not accepted from the client. The server prices
+  // the booking from the vehicle's price_per_day so a caller cannot pick its own
+  // total. See BookingsService.create.
 
-  @ApiProperty({ required: false, description: 'Additional notes for the booking' })
+  @ApiPropertyOptional({ description: 'Free-text notes for the rental' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @ApiProperty({ required: false })
+  @MaxLength(500)
   notes?: string;
 }
