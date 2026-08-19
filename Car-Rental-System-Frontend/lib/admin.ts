@@ -35,13 +35,52 @@ interface ApiListResponse<T> {
   count: number
 }
 
+/** The API's user shape, with the profile joined in. */
+interface ApiUser {
+  id: string
+  email: string
+  role: string
+  is_active?: boolean
+  created_at: string
+  last_login?: string | null
+  profile?: { first_name?: string | null; last_name?: string | null } | null
+}
+
+interface ApiBookingRow {
+  id: string
+  user_id: string
+  vehicle_id: string
+  vehicle?: Parameters<typeof mapVehicleToCar>[0]
+  start_date: string
+  end_date: string
+  total_price: string | number
+  status: Booking["status"]
+  payment_status: Booking["paymentStatus"]
+  notes?: string | null
+  pickup_location?: string | null
+  return_location?: string | null
+  driver_license?: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface ApiPaymentRow {
+  id: string
+  booking_id: string
+  amount: string | number
+  payment_method: Payment["method"]
+  status: Payment["status"]
+  transaction_id?: string | null
+  created_at: string
+}
+
 function unwrap<T>(response: ApiListResponse<T> | T[]): T[] {
   return Array.isArray(response) ? response : (response.data ?? [])
 }
 
 class AdminService {
   async getUsers(): Promise<AdminUser[]> {
-    const response = await apiRequest<ApiListResponse<any> | any[]>("/users")
+    const response = await apiRequest<ApiListResponse<ApiUser> | ApiUser[]>("/users")
 
     return unwrap(response).map((user) => ({
       id: user.id,
@@ -56,7 +95,7 @@ class AdminService {
   }
 
   async getAllBookings(): Promise<Booking[]> {
-    const response = await apiRequest<ApiListResponse<any> | any[]>("/bookings", {
+    const response = await apiRequest<ApiListResponse<ApiBookingRow> | ApiBookingRow[]>("/bookings", {
       query: { limit: 100 },
     })
 
@@ -87,7 +126,7 @@ class AdminService {
   }
 
   async getAllPayments(): Promise<Payment[]> {
-    const response = await apiRequest<ApiListResponse<any> | any[]>("/payments", {
+    const response = await apiRequest<ApiListResponse<ApiPaymentRow> | ApiPaymentRow[]>("/payments", {
       query: { limit: 100 },
     })
 
@@ -103,7 +142,7 @@ class AdminService {
   }
 
   async getAllCars(): Promise<Car[]> {
-    const response = await apiRequest<ApiListResponse<any>>("/vehicles", {
+    const response = await apiRequest<ApiListResponse<Parameters<typeof mapVehicleToCar>[0]>>("/vehicles", {
       auth: false,
       query: { limit: 100 },
     })

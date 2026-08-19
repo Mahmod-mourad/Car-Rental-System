@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, FileText, Tag, CreditCard } from "lucide-react"
+import { Calendar, MapPin, FileText, CreditCard } from "lucide-react"
 import { carsService, type Car } from "@/lib/cars"
 import { bookingsService, type CreateBookingData } from "@/lib/bookings"
 

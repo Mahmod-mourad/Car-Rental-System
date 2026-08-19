@@ -3,51 +3,58 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Zap, Shield, Clock } from 'lucide-react';
+import { Star } from 'lucide-react';
 
-type Car = {
-  id: number;
-  name: string;
-  type: string;
-  price: number;
-  rating: number;
-  image: string;
-  features: string[];
-  isPopular?: boolean;
+import { useEffect, useState } from 'react';
+
+import { carsService, type Car } from '@/lib/cars';
+
+const CATEGORY_LABELS: Record<Car['category'], string> = {
+  sedan: 'سيدان',
+  suv: 'دفع رباعي',
+  luxury: 'فاخرة',
+  van: 'فان',
+  truck: 'شاحنة',
 };
 
-const featuredCars: Car[] = [
-  {
-    id: 1,
-    name: 'مرسيدس بنز الفئة S',
-    type: 'سيارة سيدان فاخرة',
-    price: 899,
-    rating: 4.9,
-    image: '/images/cars/mercedes-s-class.jpg',
-    features: ['أوتوماتيك', '5 مقاعد', 'بنزين', '4 أبواب'],
-    isPopular: true,
-  },
-  {
-    id: 2,
-    name: 'بي إم دبليو X7',
-    type: 'دفع رباعي فاخر',
-    price: 999,
-    rating: 4.8,
-    image: '/images/cars/bmw-x7.jpg',
-    features: ['أوتوماتيك', '7 مقاعد', 'بنزين', '4 أبواب'],
-  },
-  {
-    id: 3,
-    name: 'أودي A8',
-    type: 'سيارة سيدان فاخرة',
-    price: 849,
-    rating: 4.7,
-    image: '/images/cars/audi-a8.jpg',
-    features: ['أوتوماتيك', '5 مقاعد', 'بنزين', '4 أبواب'],
-  },
-];
+const TRANSMISSION_LABELS: Record<Car['transmission'], string> = {
+  automatic: 'أوتوماتيك',
+  manual: 'يدوي',
+};
+
+const FUEL_LABELS: Record<Car['fuelType'], string> = {
+  gasoline: 'بنزين',
+  diesel: 'ديزل',
+  electric: 'كهربائي',
+  hybrid: 'هجين',
+};
+
+/** The four chips under each card, built from what the vehicle record holds. */
+function specChips(car: Car): string[] {
+  return [
+    TRANSMISSION_LABELS[car.transmission],
+    `${car.seats} مقاعد`,
+    FUEL_LABELS[car.fuelType],
+    car.doors ? `${car.doors} أبواب` : null,
+  ].filter((chip): chip is string => Boolean(chip));
+}
 
 export default function FeaturedCars() {
+  const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    carsService
+      .getFeaturedCars(3)
+      .then(setFeaturedCars)
+      // The home page should still render if the API is unreachable; the section
+      // just stays empty rather than taking the page down with it.
+      .catch(() => setFeaturedCars([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (!loading && featuredCars.length === 0) return null;
+
   return (
     <section className="py-16 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -68,7 +75,7 @@ export default function FeaturedCars() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              {car.isPopular && (
+              {car.isFeatured && (
                 <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full z-10">
                   الأكثر طلباً
                 </div>
@@ -76,7 +83,7 @@ export default function FeaturedCars() {
               
               <div className="relative h-56 w-full">
                 <Image
-                  src={car.image}
+                  src={car.images[0] || '/images/cars/car-placeholder.jpg'}
                   alt={car.name}
                   fill
                   className="object-cover"
@@ -88,7 +95,7 @@ export default function FeaturedCars() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-4 right-4 text-white text-right">
                   <h3 className="text-xl font-bold">{car.name}</h3>
-                  <p className="text-sm text-gray-200">{car.type}</p>
+                  <p className="text-sm text-gray-200">{CATEGORY_LABELS[car.category]}</p>
                 </div>
               </div>
 
@@ -96,12 +103,12 @@ export default function FeaturedCars() {
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center">
                     <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                    <span className="mr-1 text-gray-700 dark:text-gray-300">{car.rating}</span>
-                    <span className="text-gray-500 text-sm">(24 تقييم)</span>
+                    <span className="mr-1 text-gray-700 dark:text-gray-300">{car.rating.toFixed(1)}</span>
+                    <span className="text-gray-500 text-sm">({car.reviewsCount} تقييم)</span>
                   </div>
                   <div className="text-left">
                     <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {car.price} ريال
+                      {car.pricePerDay} ريال
                     </span>
                     <span className="block text-sm text-gray-500">ليوم الواحد</span>
                   </div>
@@ -109,7 +116,7 @@ export default function FeaturedCars() {
 
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                   <div className="grid grid-cols-2 gap-2 mb-4">
-                    {car.features.map((feature, i) => (
+                    {specChips(car).map((feature, i) => (
                       <div key={i} className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                         <span className="ml-2">•</span>
                         <span>{feature}</span>

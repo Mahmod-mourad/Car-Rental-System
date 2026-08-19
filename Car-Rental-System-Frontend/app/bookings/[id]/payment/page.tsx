@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -18,7 +17,6 @@ import { paymentsService, type PaymentMethod } from "@/lib/payments"
 export default function PaymentPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
   const bookingId = params.id as string
 
   const [booking, setBooking] = useState<Booking | null>(null)

@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowRight,
   Car,
-  Upload,
   Save,
   X,
   Plus,
@@ -159,7 +158,7 @@ export default function NewCarPage() {
 
       // Redirect to admin cars page
       router.push("/admin")
-    } catch (error) {
+    } catch {
       toast({
         title: "خطأ في إضافة السيارة",
         description: "يرجى المحاولة مرة أخرى",

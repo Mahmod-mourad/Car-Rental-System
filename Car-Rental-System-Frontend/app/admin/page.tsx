@@ -21,17 +21,12 @@ import {
   Car,
   Users,
   Calendar,
-  CreditCard,
   TrendingUp,
   AlertCircle,
-  CheckCircle,
-  Clock,
   Eye,
   Edit,
   Trash2,
   Plus,
-  Search,
-  Filter,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -108,19 +103,6 @@ export default function AdminPage() {
     loadAdminData()
   }, [])
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { text: "في الانتظار", variant: "secondary" as const },
-      confirmed: { text: "مؤكد", variant: "default" as const },
-      active: { text: "نشط", variant: "default" as const },
-      completed: { text: "مكتمل", variant: "outline" as const },
-      cancelled: { text: "ملغي", variant: "destructive" as const },
-      available: { text: "متاح", variant: "default" as const },
-      rented: { text: "مؤجر", variant: "secondary" as const },
-      maintenance: { text: "صيانة", variant: "destructive" as const },
-    }
-    return statusConfig[status as keyof typeof statusConfig] || { text: status, variant: "secondary" as const }
-  }
 
   const filteredCars = cars.filter(car => {
     const matchesSearch = car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -444,9 +426,6 @@ export default function AdminPage() {
                         </TableHeader>
                         <TableBody>
                           {filteredCars.map((car) => {
-                            const availabilityBadge = car.isAvailable
-                              ? { text: "متاحة", variant: "default" as const }
-                              : { text: "غير متاحة", variant: "secondary" as const }
                             return (
                               <TableRow key={car.id}>
                                 <TableCell>
@@ -553,12 +532,12 @@ export default function AdminPage() {
                         </TableHeader>
                         <TableBody>
                           {filteredBookings.map((booking) => {
-                            const availabilityBadge = getStatusBadge(booking.status)
+                            const customer = users.find((u) => u.id === booking.userId)
                             return (
                               <TableRow key={booking.id}>
                                 <TableCell className="font-medium">#{booking.id}</TableCell>
                                 <TableCell>{booking.car?.name}</TableCell>
-                                <TableCell>أحمد محمد</TableCell>
+                                <TableCell>{customer ? displayName(customer) : "—"}</TableCell>
                                 <TableCell>
                                   <div className="text-sm">
                                     <div>من: {new Date(booking.startDate).toLocaleDateString("ar-SA")}</div>

@@ -82,7 +82,7 @@ export default function TestimonialsSection() {
                 </div>
               </div>
               
-              <p className="text-gray-600 dark:text-gray-300 mb-4 text-right">"{testimonial.content}"</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4 text-right">&ldquo;{testimonial.content}&rdquo;</p>
               
               <div className="flex items-center justify-end">
                 {[...Array(5)].map((_, i) => (

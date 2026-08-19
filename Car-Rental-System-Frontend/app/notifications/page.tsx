@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -14,7 +13,6 @@ import { Bell, Calendar, CreditCard, AlertCircle, Check, Trash2, CheckCheck } fr
 import { notificationsService, type Notification } from "@/lib/notifications"
 
 export default function NotificationsPage() {
-  const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)

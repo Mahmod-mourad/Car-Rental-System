@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -12,10 +11,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, MapPin, Car, Eye, X, ChevronLeft, ChevronRight } from "lucide-react"
-import { bookingsService, type Booking, type BookingFilters } from "@/lib/bookings"
+import {
+  bookingsService,
+  type Booking,
+  type BookingFilters,
+  type BookingStatus,
+  type PaymentStatus,
+} from "@/lib/bookings"
 
 export default function MyBookingsPage() {
-  const { user } = useAuth()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -53,7 +57,10 @@ export default function MyBookingsPage() {
     loadBookings()
   }, [])
 
-  const handleFilterChange = (key: keyof BookingFilters, value: any) => {
+  const handleFilterChange = <K extends keyof BookingFilters>(
+    key: K,
+    value: BookingFilters[K],
+  ) => {
     const newFilters = { ...filters, [key]: value, page: 1 }
     setFilters(newFilters)
     loadBookings(newFilters)
@@ -116,7 +123,7 @@ export default function MyBookingsPage() {
                   <label className="text-sm font-medium">حالة الحجز</label>
                   <Select
                     value={filters.status || "all"}
-                    onValueChange={(value) => handleFilterChange("status", value === "all" ? undefined : value)}
+                    onValueChange={(value) => handleFilterChange("status", value === "all" ? undefined : (value as BookingStatus))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="جميع الحالات" />
@@ -136,7 +143,7 @@ export default function MyBookingsPage() {
                   <label className="text-sm font-medium">حالة الدفع</label>
                   <Select
                     value={filters.paymentStatus || "all"}
-                    onValueChange={(value) => handleFilterChange("paymentStatus", value === "all" ? undefined : value)}
+                    onValueChange={(value) => handleFilterChange("paymentStatus", value === "all" ? undefined : (value as PaymentStatus))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="جميع حالات الدفع" />

@@ -42,7 +42,7 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
     loadFilterData()
   }, [])
 
-  const handleFilterChange = (key: keyof CarFilters, value: any) => {
+  const handleFilterChange = <K extends keyof CarFilters>(key: K, value: CarFilters[K]) => {
     onFiltersChange({ ...filters, [key]: value })
   }
 
@@ -110,7 +110,7 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
                 <Label>الفئة</Label>
                 <Select
                   value={filters.category || "all"}
-                  onValueChange={(value) => handleFilterChange("category", value)}
+                  onValueChange={(value) => handleFilterChange("category", value === "all" ? undefined : (value as CarFilters["category"]))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الفئة" />
@@ -149,7 +149,7 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
                 <Label>ناقل الحركة</Label>
                 <Select
                   value={filters.transmission || "all"}
-                  onValueChange={(value) => handleFilterChange("transmission", value)}
+                  onValueChange={(value) => handleFilterChange("transmission", value === "all" ? undefined : (value as CarFilters["transmission"]))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="نوع ناقل الحركة" />
@@ -167,7 +167,7 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
                 <Label>نوع الوقود</Label>
                 <Select
                   value={filters.fuelType || "all"}
-                  onValueChange={(value) => handleFilterChange("fuelType", value)}
+                  onValueChange={(value) => handleFilterChange("fuelType", value === "all" ? undefined : (value as CarFilters["fuelType"]))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="نوع الوقود" />
@@ -232,7 +232,7 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
                 <Label>ترتيب حسب</Label>
                 <Select
                   value={filters.sortBy || "default"}
-                  onValueChange={(value) => handleFilterChange("sortBy", value)}
+                  onValueChange={(value) => handleFilterChange("sortBy", value === "all" ? undefined : (value as CarFilters["sortBy"]))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="ترتيب النتائج" />
@@ -251,7 +251,7 @@ export function CarFiltersComponent({ filters, onFiltersChange, onSearch, loadin
                 <Label>اتجاه الترتيب</Label>
                 <Select
                   value={filters.sortOrder || "asc"}
-                  onValueChange={(value) => handleFilterChange("sortOrder", value)}
+                  onValueChange={(value) => handleFilterChange("sortOrder", value === "all" ? undefined : (value as CarFilters["sortOrder"]))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="اتجاه الترتيب" />

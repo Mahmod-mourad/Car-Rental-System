@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -17,7 +16,6 @@ import { bookingsService, type Booking } from "@/lib/bookings"
 
 export default function BookingConfirmationPage() {
   const params = useParams()
-  const { user } = useAuth()
   const bookingId = params.id as string
 
   const [booking, setBooking] = useState<Booking | null>(null)
