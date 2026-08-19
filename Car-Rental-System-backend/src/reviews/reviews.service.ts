@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from '../database/entities/review.entity';
@@ -7,7 +12,7 @@ import { User } from '../database/entities/user.entity';
 import { Vehicle } from '../database/entities/vehicle.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
-import { ReviewResponseDto, ReviewDto } from './dto/review-response.dto';
+import { ReviewDto } from './dto/review-response.dto';
 
 @Injectable()
 export class ReviewsService {
@@ -23,10 +28,10 @@ export class ReviewsService {
   ) {}
 
   private mapToDto(review: Review): ReviewDto {
-    const userName = review.user?.profile 
+    const userName = review.user?.profile
       ? `${review.user.profile.first_name || ''} ${review.user.profile.last_name || ''}`.trim()
       : review.user?.email || 'Unknown User';
-      
+
     const vehicleName = review.vehicle
       ? `${review.vehicle.make || ''} ${review.vehicle.model || ''}`.trim()
       : 'Unknown Vehicle';
@@ -46,16 +51,19 @@ export class ReviewsService {
     };
   }
 
-  async create(createReviewDto: CreateReviewDto, userId: string): Promise<ReviewDto> {
+  async create(
+    createReviewDto: CreateReviewDto,
+    userId: string,
+  ): Promise<ReviewDto> {
     // Check if the booking exists and is completed
     const booking = await this.bookingsRepository.findOne({
       where: { id: createReviewDto.booking_id },
       relations: [
-        'user', 
+        'user',
         'user.profile',
-        'vehicle', 
+        'vehicle',
         'vehicle.owner',
-        'vehicle.owner.profile'
+        'vehicle.owner.profile',
       ],
     });
 
@@ -93,7 +101,7 @@ export class ReviewsService {
     });
 
     const savedReview = await this.reviewsRepository.save(review);
-    
+
     // Update vehicle's average rating and review count
     await this.updateVehicleRating(booking.vehicle.id);
 
@@ -116,7 +124,7 @@ export class ReviewsService {
     }
 
     const reviews = await query.getMany();
-    return reviews.map(review => this.mapToDto(review));
+    return reviews.map((review) => this.mapToDto(review));
   }
 
   async findOne(id: string): Promise<ReviewDto> {
@@ -132,7 +140,12 @@ export class ReviewsService {
     return this.mapToDto(review);
   }
 
-  async update(id: string, updateReviewDto: UpdateReviewDto, userId: string, isAdmin = false): Promise<ReviewDto> {
+  async update(
+    id: string,
+    updateReviewDto: UpdateReviewDto,
+    userId: string,
+    isAdmin = false,
+  ): Promise<ReviewDto> {
     const review = await this.reviewsRepository.findOne({
       where: { id },
       relations: ['user', 'vehicle'],
@@ -144,14 +157,16 @@ export class ReviewsService {
 
     // Check if the user is the owner of the review or an admin
     if (review.user_id !== userId && !isAdmin) {
-      throw new ForbiddenException('You are not authorized to update this review');
+      throw new ForbiddenException(
+        'You are not authorized to update this review',
+      );
     }
 
     // Only allow updating rating and comment
     if (updateReviewDto.rating) {
       review.rating = updateReviewDto.rating;
     }
-    
+
     if (updateReviewDto.comment !== undefined) {
       review.comment = updateReviewDto.comment;
     }
@@ -179,7 +194,9 @@ export class ReviewsService {
 
     // Check if the user is the owner of the review or an admin
     if (review.user_id !== userId && !isAdmin) {
-      throw new ForbiddenException('You are not authorized to delete this review');
+      throw new ForbiddenException(
+        'You are not authorized to delete this review',
+      );
     }
 
     const vehicleId = review.vehicle_id;
@@ -189,7 +206,11 @@ export class ReviewsService {
     await this.updateVehicleRating(vehicleId);
   }
 
-  async addResponse(reviewId: string, response: { comment: string }, userId: string): Promise<ReviewDto> {
+  async addResponse(
+    reviewId: string,
+    response: { comment: string },
+    userId: string,
+  ): Promise<ReviewDto> {
     const review = await this.reviewsRepository.findOne({
       where: { id: reviewId },
       relations: ['vehicle', 'vehicle.owner', 'user'],
@@ -201,7 +222,9 @@ export class ReviewsService {
 
     // Check if the user is the owner of the vehicle
     if (review.vehicle.owner.id !== userId) {
-      throw new ForbiddenException('Only the vehicle owner can respond to reviews');
+      throw new ForbiddenException(
+        'Only the vehicle owner can respond to reviews',
+      );
     }
 
     // Add or update the response

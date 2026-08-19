@@ -17,8 +17,6 @@ import {
   Send,
   MessageSquare,
   Building,
-  User,
-  Calendar
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
@@ -108,7 +106,7 @@ export default function ContactPage() {
         subject: "",
         message: "",
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "خطأ في إرسال الرسالة",
         description: "يرجى المحاولة مرة أخرى",

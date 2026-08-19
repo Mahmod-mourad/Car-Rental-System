@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
+import { displayName } from "@/lib/auth"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -68,7 +69,7 @@ export default function DashboardPage() {
         ).length
         const completedBookings = bookingsResponse.bookings.filter((b) => b.status === "completed").length
         const totalSpent = paymentsData.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0)
-        const unreadNotifications = notificationsData.filter((n) => !n.isRead).length
+        const unreadNotifications = notificationsData.unread
 
         setStats({
           totalBookings,
@@ -79,7 +80,7 @@ export default function DashboardPage() {
         })
 
         setRecentBookings(bookingsResponse.bookings.slice(0, 3))
-        setRecentNotifications(notificationsData.slice(0, 5))
+        setRecentNotifications(notificationsData.notifications.slice(0, 5))
       } catch (err) {
         setError(err instanceof Error ? err.message : "حدث خطأ أثناء جلب البيانات")
       } finally {
@@ -146,7 +147,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4 mb-4">
               <Avatar className="w-12 h-12">
                 <AvatarFallback>
-                  {user.name
+                  {displayName(user)
                     .split(" ")
                     .map((n) => n[0])
                     .join("")
@@ -154,7 +155,7 @@ export default function DashboardPage() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-3xl font-bold">مرحباً، {user.name}</h1>
+                <h1 className="text-3xl font-bold">مرحباً، {user.email}</h1>
                 <p className="text-muted-foreground">إليك نظرة عامة على نشاطك</p>
               </div>
             </div>
@@ -320,18 +321,18 @@ export default function DashboardPage() {
                           <div
                             key={notification.id}
                             className={`flex items-start gap-3 p-3 rounded-lg border ${
-                              !notification.isRead ? "bg-primary/5 border-primary/20" : ""
+                              !notification.read ? "bg-primary/5 border-primary/20" : ""
                             }`}
                           >
                             <div className="bg-muted p-2 rounded-full">{getNotificationIcon(notification.type)}</div>
                             <div className="flex-1">
                               <h4 className="font-medium text-sm">{notification.title}</h4>
-                              <p className="text-sm text-muted-foreground">{notification.message}</p>
+                              <p className="text-sm text-muted-foreground">{notification.body}</p>
                               <p className="text-xs text-muted-foreground mt-1">
                                 {new Date(notification.createdAt).toLocaleDateString("ar-SA")}
                               </p>
                             </div>
-                            {!notification.isRead && <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>}
+                            {!notification.read && <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>}
                           </div>
                         ))}
                       </div>

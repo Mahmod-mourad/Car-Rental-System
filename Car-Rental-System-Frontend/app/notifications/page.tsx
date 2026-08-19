@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -14,7 +13,6 @@ import { Bell, Calendar, CreditCard, AlertCircle, Check, Trash2, CheckCheck } fr
 import { notificationsService, type Notification } from "@/lib/notifications"
 
 export default function NotificationsPage() {
-  const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,7 +25,7 @@ export default function NotificationsPage() {
     setError("")
 
     try {
-      const data = await notificationsService.getNotifications()
+      const { notifications: data } = await notificationsService.getNotifications({ limit: 100 })
       setNotifications(data)
       applyFilters(data, filter, typeFilter)
     } catch (err) {
@@ -46,9 +44,9 @@ export default function NotificationsPage() {
 
     // Apply read/unread filter
     if (readFilter === "read") {
-      filtered = filtered.filter((n) => n.isRead)
+      filtered = filtered.filter((n) => n.read)
     } else if (readFilter === "unread") {
-      filtered = filtered.filter((n) => !n.isRead)
+      filtered = filtered.filter((n) => !n.read)
     }
 
     // Apply type filter
@@ -72,9 +70,9 @@ export default function NotificationsPage() {
   const markAsRead = async (notificationId: string) => {
     try {
       await notificationsService.markAsRead(notificationId)
-      setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)))
+      setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)))
       applyFilters(
-        notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)),
+        notifications.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
         filter,
         typeFilter,
       )
@@ -86,9 +84,9 @@ export default function NotificationsPage() {
   const markAllAsRead = async () => {
     try {
       await notificationsService.markAllAsRead()
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
       applyFilters(
-        notifications.map((n) => ({ ...n, isRead: true })),
+        notifications.map((n) => ({ ...n, read: true })),
         filter,
         typeFilter,
       )
@@ -133,7 +131,7 @@ export default function NotificationsPage() {
     return types[type as keyof typeof types] || type
   }
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   return (
     <ProtectedRoute>
@@ -225,7 +223,7 @@ export default function NotificationsPage() {
               {filteredNotifications.map((notification) => (
                 <Card
                   key={notification.id}
-                  className={`transition-all ${!notification.isRead ? "border-primary/50 bg-primary/5" : ""}`}
+                  className={`transition-all ${!notification.read ? "border-primary/50 bg-primary/5" : ""}`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
@@ -237,11 +235,11 @@ export default function NotificationsPage() {
                             <h3 className="font-semibold">{notification.title}</h3>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline">{getTypeText(notification.type)}</Badge>
-                              {!notification.isRead && <Badge variant="default">جديد</Badge>}
+                              {!notification.read && <Badge variant="default">جديد</Badge>}
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            {!notification.isRead && (
+                            {!notification.read && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -262,7 +260,7 @@ export default function NotificationsPage() {
                           </div>
                         </div>
 
-                        <p className="text-muted-foreground mb-2">{notification.message}</p>
+                        <p className="text-muted-foreground mb-2">{notification.body}</p>
 
                         <p className="text-xs text-muted-foreground">
                           {new Date(notification.createdAt).toLocaleString("ar-SA")}

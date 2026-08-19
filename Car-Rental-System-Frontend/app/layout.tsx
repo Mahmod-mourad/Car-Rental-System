@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Cairo } from "next/font/google"
 import { AuthProvider } from "@/contexts/auth-context"
-import { initializeLocalStorage } from "@/lib/local-storage"
 import "./globals.css"
 
 const inter = Inter({
@@ -27,11 +26,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  // Initialize localStorage on client side
-  if (typeof window !== "undefined") {
-    initializeLocalStorage()
-  }
-
   return (
     <html lang="ar" dir="rtl" className={`${inter.variable} ${cairo.variable}`}>
       <body className="font-cairo antialiased">

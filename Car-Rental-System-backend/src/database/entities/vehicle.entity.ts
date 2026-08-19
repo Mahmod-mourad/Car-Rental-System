@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  UpdateDateColumn,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Review } from './review.entity';
 import { Point } from '../../common/types/postgis.types';
@@ -65,6 +74,25 @@ export class Vehicle {
   @Column('decimal', { precision: 10, scale: 2 })
   price_per_day: number;
 
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  color: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  mileage: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  doors: number | null;
+
+  @Column({ type: 'boolean', default: true })
+  air_conditioning: boolean;
+
+  /** Human-readable pickup point. The `location` column below is the PostGIS point. */
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  location_name: string | null;
+
   @Column('boolean', { default: true })
   available: boolean;
 
@@ -77,23 +105,34 @@ export class Vehicle {
   @Column('boolean', { default: false })
   is_featured: boolean;
 
-  @Column('geometry', {
-    type: 'point',
+  /**
+   * PostGIS point used by the radius search in VehiclesService.findAll.
+   *
+   * This was declared as `@Column('geometry', { type: 'point', ... })`, where the
+   * options object's `type` overrode the first argument — so TypeORM treated the
+   * column as Postgres's native `point` rather than a PostGIS geometry, and with
+   * synchronize on it quietly altered the column the migration had created.
+   * `spatialFeatureType` is how the geometry subtype is declared.
+   */
+  @Column({
+    type: 'geometry',
+    spatialFeatureType: 'Point',
     srid: 4326,
     nullable: true,
-  } as any) // Using any to bypass TypeORM type issues with PostGIS
-  location: any; // Using any for now to avoid TypeORM type issues with PostGIS
+  })
+  location: Point | null;
 
   @Column('text', { array: true, default: [] })
   images: string[];
 
+  /** Feature labels shown on the vehicle card, e.g. ["GPS", "Bluetooth"]. */
   @Column('jsonb', { nullable: true })
-  features: Record<string, any>;
+  features: string[] | null;
 
-  @Column('timestamp')
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  @Column('timestamp')
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 
   @ManyToOne(() => User, (user) => user.vehicles)

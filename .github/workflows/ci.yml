@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # PostGIS, not plain postgres — the first migration creates the extension
+        # and the vehicles table has a geometry column.
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: car_rental_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: car_rental_test
+      JWT_SECRET: ci-only-secret
+
+    defaults:
+      run:
+        working-directory: Car-Rental-System-backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Car-Rental-System-backend/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint:ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test -- --ci
+
+      # Proves the schema can be built from the migrations alone, and that every
+      # migration's down() is written and works. A migration that cannot be rolled
+      # back is a migration you cannot deploy safely.
+      - name: Migrations apply, revert and re-apply
+        run: |
+          npm run migration:run
+          npm run migration:revert
+          npm run migration:run
+
+      - name: Seed
+        run: npm run seed
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Car-Rental-System-Frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Car-Rental-System-Frontend/package-lock.json
+
+      - run: npm ci
+
+      # Separate from the build so a type error is reported as a type error.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build both images
+        run: docker compose build

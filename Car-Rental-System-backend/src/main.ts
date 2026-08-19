@@ -20,7 +20,7 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
-  
+
   // CORS. A wildcard origin is not valid alongside credentials — browsers reject it —
   // so the allowed origins come from config and default to the local Next.js dev server.
   const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000')
@@ -69,4 +69,7 @@ async function bootstrap() {
   console.log(`Application is running on: http://localhost:${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/api`);
 }
-bootstrap();
+void bootstrap().catch((error) => {
+  console.error('Failed to start:', error);
+  process.exit(1);
+});

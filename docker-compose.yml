@@ -1,0 +1,58 @@
+services:
+  postgres:
+    # PostGIS, not plain postgres: the vehicles table has a geometry column and the
+    # first migration creates the postgis extension. A stock postgres image fails.
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: car_rental
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d car_rental"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./Car-Rental-System-backend
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      CORS_ORIGINS: http://localhost:3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: car_rental
+      JWT_SECRET: local-development-only-change-for-anything-real
+      JWT_EXPIRES_IN: 1d
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Migrations run before the API starts, so a fresh volume comes up with the
+    # right schema without a manual step.
+    command: sh -c "npm run migration:run && npm run seed && node dist/main"
+
+  web:
+    build:
+      context: ./Car-Rental-System-Frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+    environment:
+      # The browser talks to the API directly, so this is the host's address, not
+      # the compose service name.
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:

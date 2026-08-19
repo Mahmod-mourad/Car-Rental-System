@@ -1,186 +1,87 @@
-// Payments API service with static data fallback
-import { API_BASE_URL } from "./config"
+import { apiRequest } from "./api-client"
 
-// Import static data
-import { 
-  staticPayments, 
-  getPaymentsByUserId, 
-  type StaticPayment 
-} from "./static-data"
+export type PaymentMethod = "credit_card" | "debit_card" | "paypal" | "bank_transfer" | "other"
+export type PaymentStatus =
+  | "pending"
+  | "completed"
+  | "failed"
+  | "refunded"
+  | "partially_refunded"
 
 export interface Payment {
   id: string
   bookingId: string
   amount: number
-  currency: string
-  status: "pending" | "completed" | "failed" | "refunded"
-  method: "credit_card" | "debit_card" | "cash" | "bank_transfer"
-  transactionId?: string
+  method: PaymentMethod
+  status: PaymentStatus
+  transactionId: string | null
   createdAt: string
 }
 
-export interface CreatePaymentRequest {
-  bookingId: string
-  amount: number
-  method: string
+interface ApiPayment {
+  id: string
+  booking_id: string
+  amount: string | number
+  payment_method: PaymentMethod
+  status: PaymentStatus
+  transaction_id: string | null
+  created_at: string
 }
 
-export interface PaymentFilters {
-  status?: string
-  method?: string
-  startDate?: string
-  endDate?: string
-  page?: number
-  limit?: number
+interface ApiListResponse<T> {
+  data: T[]
+  count: number
 }
 
-export interface PaymentsResponse {
-  payments: Payment[]
-  total: number
-  page: number
-  totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
+function mapPayment(payment: ApiPayment): Payment {
+  return {
+    id: payment.id,
+    bookingId: payment.booking_id,
+    amount: Number(payment.amount),
+    method: payment.payment_method,
+    status: payment.status,
+    transactionId: payment.transaction_id,
+    createdAt: payment.created_at,
+  }
 }
 
 class PaymentsService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("accessToken")
-    return {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-    }
+  /**
+   * Opens a payment against a booking. The amount is not passed — the API charges
+   * whatever is still owed, so the browser cannot decide what a rental costs.
+   *
+   * The payment comes back pending. Nothing here can mark it complete; settling a
+   * payment is an administrative action on the API.
+   */
+  async createPayment(bookingId: string, method: PaymentMethod): Promise<Payment> {
+    const payment = await apiRequest<ApiPayment>("/payments", {
+      method: "POST",
+      body: { booking_id: bookingId, payment_method: method },
+    })
+
+    return mapPayment(payment)
   }
 
-  async getMyPayments(filters: PaymentFilters = {}): Promise<Payment[]> {
-    try {
-      // For demo purposes, assume current user ID is "user1"
-      const userId = "user1"
-      let userPayments = getPaymentsByUserId(userId)
-      
-      // Apply filters
-      if (filters.status) {
-        userPayments = userPayments.filter(payment => payment.status === filters.status)
-      }
-      
-      if (filters.method) {
-        userPayments = userPayments.filter(payment => payment.method === filters.method)
-      }
-      
-      if (filters.startDate) {
-        userPayments = userPayments.filter(payment => payment.createdAt >= filters.startDate!)
-      }
-      
-      if (filters.endDate) {
-        userPayments = userPayments.filter(payment => payment.createdAt <= filters.endDate!)
-      }
-      
-      return userPayments as Payment[]
-    } catch (error) {
-      console.error("Error getting payments from static data:", error)
-      throw new Error("فشل في جلب المدفوعات")
-    }
+  async getMyPayments(): Promise<Payment[]> {
+    const response = await apiRequest<ApiListResponse<ApiPayment>>("/payments/my-payments")
+    return (response.data ?? []).map(mapPayment)
   }
 
-  async getPaymentById(id: string): Promise<Payment> {
-    try {
-      const payment = staticPayments.find(p => p.id === id)
-      if (!payment) {
-        throw new Error("الدفعة غير موجودة")
-      }
-      return payment as Payment
-    } catch (error) {
-      console.error("Error getting payment by ID from static data:", error)
-      throw new Error("فشل في جلب تفاصيل الدفعة")
-    }
+  async getPaymentsForBooking(bookingId: string): Promise<Payment[]> {
+    const response = await apiRequest<ApiListResponse<ApiPayment> | ApiPayment[]>(
+      `/payments/booking/${bookingId}`,
+    )
+
+    const rows = Array.isArray(response) ? response : (response.data ?? [])
+    return rows.map(mapPayment)
   }
 
-  async createPayment(data: CreatePaymentRequest): Promise<Payment> {
-    try {
-      // Simulate creating a new payment
-      const newPayment: StaticPayment = {
-        id: `payment_${Date.now()}`,
-        bookingId: data.bookingId,
-        amount: data.amount,
-        currency: "SAR",
-        status: "pending",
-        method: data.method as any,
-        createdAt: new Date().toISOString(),
-      }
-      
-      // In a real app, this would be saved to the database
-      console.log("Created payment:", newPayment)
-      
-      return newPayment as Payment
-    } catch (error) {
-      console.error("Error creating payment:", error)
-      throw new Error("فشل في إنشاء الدفعة")
-    }
-  }
+  async getTotalPaid(bookingId: string): Promise<number> {
+    const result = await apiRequest<{ total: string | number }>(
+      `/payments/booking/${bookingId}/total-paid`,
+    )
 
-  async processPayment(paymentId: string): Promise<Payment> {
-    try {
-      const payment = staticPayments.find(p => p.id === paymentId)
-      if (!payment) {
-        throw new Error("الدفعة غير موجودة")
-      }
-      
-      // Simulate processing the payment
-      const processedPayment = {
-        ...payment,
-        status: "completed" as const,
-        transactionId: `TXN${Date.now()}`,
-      }
-      
-      console.log("Processed payment:", processedPayment)
-      
-      return processedPayment as Payment
-    } catch (error) {
-      console.error("Error processing payment:", error)
-      throw new Error("فشل في معالجة الدفعة")
-    }
-  }
-
-  async getAllPayments(filters: PaymentFilters = {}): Promise<PaymentsResponse> {
-    try {
-      let allPayments = [...staticPayments]
-      
-      // Apply filters
-      if (filters.status) {
-        allPayments = allPayments.filter(payment => payment.status === filters.status)
-      }
-      
-      if (filters.method) {
-        allPayments = allPayments.filter(payment => payment.method === filters.method)
-      }
-      
-      if (filters.startDate) {
-        allPayments = allPayments.filter(payment => payment.createdAt >= filters.startDate!)
-      }
-      
-      if (filters.endDate) {
-        allPayments = allPayments.filter(payment => payment.createdAt <= filters.endDate!)
-      }
-      
-      // Apply pagination
-      const page = filters.page || 1
-      const limit = filters.limit || 10
-      const startIndex = (page - 1) * limit
-      const endIndex = startIndex + limit
-      const paginatedPayments = allPayments.slice(startIndex, endIndex)
-      
-      return {
-        payments: paginatedPayments as Payment[],
-        total: allPayments.length,
-        page,
-        totalPages: Math.ceil(allPayments.length / limit),
-        hasNext: endIndex < allPayments.length,
-        hasPrev: page > 1,
-      }
-    } catch (error) {
-      console.error("Error getting all payments from static data:", error)
-      throw new Error("فشل في جلب جميع المدفوعات")
-    }
+    return Number(result.total ?? 0)
   }
 }
 

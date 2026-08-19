@@ -49,8 +49,8 @@ export default function RegisterPage() {
     }
 
     // Validate password strength
-    if (formData.password.length < 6) {
-      setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل")
+    if (formData.password.length < 8) {
+      setError("كلمة المرور يجب أن تكون 8 أحرف على الأقل")
       setLoading(false)
       return
     }

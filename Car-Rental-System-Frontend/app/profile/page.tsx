@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
+import { displayName } from "@/lib/auth"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -24,7 +25,7 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState("")
 
   const [formData, setFormData] = useState({
-    name: user?.name || "",
+    name: user ? displayName(user) : "",
     email: user?.email || "",
     phone: user?.phone || "",
   })
@@ -40,9 +41,9 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name,
+        name: displayName(user),
         email: user.email,
-        phone: user.phone || "",
+        phone: (user.phone ?? "") || "",
       })
     }
   }, [user])
@@ -115,7 +116,7 @@ export default function ProfilePage() {
   const cancelEdit = () => {
     setEditing(false)
     setFormData({
-      name: user?.name || "",
+      name: user ? displayName(user) : "",
       email: user?.email || "",
       phone: user?.phone || "",
     })
@@ -173,7 +174,7 @@ export default function ProfilePage() {
                     <div className="text-center space-y-4">
                       <Avatar className="w-24 h-24 mx-auto">
                         <AvatarFallback className="text-2xl">
-                          {user.name
+                          {displayName(user)
                             .split(" ")
                             .map((n) => n[0])
                             .join("")
@@ -182,19 +183,19 @@ export default function ProfilePage() {
                       </Avatar>
 
                       <div>
-                        <h2 className="text-xl font-semibold">{user.name}</h2>
+                        <h2 className="text-xl font-semibold">{displayName(user)}</h2>
                         <p className="text-muted-foreground">{user.email}</p>
                       </div>
 
                       <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        <span>عضو منذ {new Date(user.createdAt).toLocaleDateString("ar-SA")}</span>
+                        <span>عضو منذ {user.createdAt ? new Date(user.createdAt).toLocaleDateString("ar-SA") : "-"}</span>
                       </div>
 
                       <div className="flex items-center justify-center gap-2">
                         <Shield className="h-4 w-4 text-primary" />
                         <span className="text-sm font-medium">
-                          {user.role === "admin" ? "مدير" : user.role === "staff" ? "موظف" : "عضو"}
+                          {user.role === "admin" ? "مدير" : user.role === "agent" ? "موظف" : "عضو"}
                         </span>
                       </div>
                     </div>

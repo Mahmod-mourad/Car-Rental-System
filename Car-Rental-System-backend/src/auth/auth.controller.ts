@@ -1,9 +1,11 @@
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 import {
   Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Req,
   SetMetadata,
@@ -13,6 +15,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { IS_PUBLIC_KEY } from './guards/jwt-auth.guard';
 
 const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
@@ -26,7 +29,10 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an account and sign in' })
-  @ApiResponse({ status: 201, description: 'Account created; returns an access token' })
+  @ApiResponse({
+    status: 201,
+    description: 'Account created; returns an access token',
+  })
   @ApiResponse({ status: 409, description: 'Email already registered' })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -43,10 +49,21 @@ export class AuthController {
   }
 
   @Get('profile')
-  @ApiOperation({ summary: 'Get the signed-in user' })
+  @ApiOperation({ summary: 'Get the signed-in user and their profile' })
   @ApiResponse({ status: 200, description: 'The current user' })
-  async profile(@Req() req: any) {
-    // JwtStrategy attaches { userId, email, role }.
-    return { id: req.user.userId, email: req.user.email, role: req.user.role };
+  async profile(@Req() req: AuthenticatedRequest) {
+    // JwtStrategy attaches { userId, email, role }; the id is the only part trusted
+    // here, since the rest of the token could be stale.
+    return this.authService.getProfile(req.user.userId);
+  }
+
+  @Patch('profile')
+  @ApiOperation({ summary: 'Update your own name and phone number' })
+  @ApiResponse({ status: 200, description: 'The updated user' })
+  async updateProfile(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(req.user.userId, dto);
   }
 }

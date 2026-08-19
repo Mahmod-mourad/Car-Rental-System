@@ -1,0 +1,7 @@
+{
+  // The build config excludes tests so they stay out of dist. ESLint needs them in
+  // a project to type-check its rules, so it uses this one instead.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts", "test/**/*.ts", "*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -35,7 +35,7 @@ export class BookingRepository extends BaseRepository<Booking> {
     endDate?: Date,
   ): Promise<Booking[]> {
     const where: any = { vehicle_id: vehicleId };
-    
+
     if (startDate && endDate) {
       where.start_date = Between(startDate, endDate);
     }

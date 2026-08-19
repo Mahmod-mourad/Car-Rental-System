@@ -1,34 +1,24 @@
-// Bookings API service with static data fallback
-import { API_BASE_URL } from "./config"
+import { apiRequest } from "./api-client"
+import { mapVehicleToCar, type Car } from "./cars"
 
-// Import static data
-import { 
-  staticBookings, 
-  getBookingsByUserId, 
-  type StaticBooking 
-} from "./static-data"
-import { getBookingsFromStorage } from "./local-storage"
+export type BookingStatus = "pending" | "confirmed" | "active" | "completed" | "cancelled"
+export type PaymentStatus = "pending" | "paid" | "refunded" | "failed"
 
 export interface Booking {
   id: string
   userId: string
   carId: string
-  car?: {
-    id: string
-    name: string
-    brand: string
-    model: string
-    images: string[]
-    pricePerDay: number
-  }
+  car?: Car
   startDate: string
   endDate: string
   totalDays: number
   totalAmount: number
-  status: "pending" | "confirmed" | "active" | "completed" | "cancelled"
-  paymentStatus: "pending" | "paid" | "failed" | "refunded"
-  pickupLocation: string
-  returnLocation: string
+  status: BookingStatus
+  paymentStatus: PaymentStatus
+  notes: string | null
+  pickupLocation: string | null
+  returnLocation: string | null
+  driverLicense: string | null
   createdAt: string
   updatedAt: string
 }
@@ -37,17 +27,15 @@ export interface CreateBookingRequest {
   carId: string
   startDate: string
   endDate: string
-  pickupLocation: string
-  returnLocation: string
-}
-
-export interface UpdateBookingRequest {
-  status?: string
-  paymentStatus?: string
+  notes?: string
+  pickupLocation?: string
+  returnLocation?: string
+  driverLicense?: string
 }
 
 export interface BookingFilters {
-  status?: string
+  status?: BookingStatus
+  paymentStatus?: PaymentStatus
   startDate?: string
   endDate?: string
   page?: number
@@ -59,178 +47,121 @@ export interface BookingsResponse {
   total: number
   page: number
   totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
+}
+
+interface ApiBooking {
+  id: string
+  user_id: string
+  vehicle_id: string
+  vehicle?: Parameters<typeof mapVehicleToCar>[0]
+  start_date: string
+  end_date: string
+  total_price: string | number
+  status: BookingStatus
+  payment_status: PaymentStatus
+  notes: string | null
+  pickup_location: string | null
+  return_location: string | null
+  driver_license: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface ApiListResponse<T> {
+  data: T[]
+  count: number
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+function rentalDays(start: string, end: string): number {
+  const days = Math.round((new Date(end).getTime() - new Date(start).getTime()) / MS_PER_DAY)
+  return Math.max(days, 1)
+}
+
+function mapBooking(booking: ApiBooking): Booking {
+  return {
+    id: booking.id,
+    userId: booking.user_id,
+    carId: booking.vehicle_id,
+    car: booking.vehicle ? mapVehicleToCar(booking.vehicle) : undefined,
+    startDate: booking.start_date,
+    endDate: booking.end_date,
+    totalDays: rentalDays(booking.start_date, booking.end_date),
+    // The API prices the booking; the UI only displays what came back.
+    totalAmount: Number(booking.total_price),
+    status: booking.status,
+    paymentStatus: booking.payment_status,
+    notes: booking.notes,
+    pickupLocation: booking.pickup_location,
+    returnLocation: booking.return_location,
+    driverLicense: booking.driver_license,
+    createdAt: booking.created_at,
+    updatedAt: booking.updated_at,
+  }
 }
 
 class BookingsService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("accessToken")
-    return {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-    }
+  async createBooking(data: CreateBookingRequest): Promise<Booking> {
+    const booking = await apiRequest<ApiBooking>("/bookings", {
+      method: "POST",
+      body: {
+        vehicle_id: data.carId,
+        start_date: data.startDate,
+        end_date: data.endDate,
+        notes: data.notes || undefined,
+        pickup_location: data.pickupLocation || undefined,
+        return_location: data.returnLocation || undefined,
+        driver_license: data.driverLicense || undefined,
+      },
+    })
+
+    return mapBooking(booking)
   }
 
   async getMyBookings(filters: BookingFilters = {}): Promise<BookingsResponse> {
-    try {
-      // For demo purposes, assume current user ID is "user1"
-      const userId = "user1"
-      let userBookings = getBookingsByUserId(userId)
-      
-      // Apply filters
-      if (filters.status) {
-        userBookings = userBookings.filter(booking => booking.status === filters.status)
-      }
-      
-      if (filters.startDate) {
-        userBookings = userBookings.filter(booking => booking.startDate >= filters.startDate!)
-      }
-      
-      if (filters.endDate) {
-        userBookings = userBookings.filter(booking => booking.endDate <= filters.endDate!)
-      }
-      
-      // Apply pagination
-      const page = filters.page || 1
-      const limit = filters.limit || 10
-      const startIndex = (page - 1) * limit
-      const endIndex = startIndex + limit
-      const paginatedBookings = userBookings.slice(startIndex, endIndex)
-      
-      return {
-        bookings: paginatedBookings as Booking[],
-        total: userBookings.length,
+    const page = filters.page ?? 1
+    const limit = filters.limit ?? 10
+
+    const response = await apiRequest<ApiListResponse<ApiBooking>>("/bookings/my-bookings", {
+      query: {
+        status: filters.status,
+        paymentStatus: filters.paymentStatus,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
         page,
-        totalPages: Math.ceil(userBookings.length / limit),
-        hasNext: endIndex < userBookings.length,
-        hasPrev: page > 1,
-      }
-    } catch (error) {
-      console.error("Error getting bookings from static data:", error)
-      throw new Error("فشل في جلب الحجوزات")
+        limit,
+      },
+    })
+
+    return {
+      bookings: (response.data ?? []).map(mapBooking),
+      total: response.count ?? 0,
+      page,
+      totalPages: Math.max(Math.ceil((response.count ?? 0) / limit), 1),
     }
   }
 
   async getBookingById(id: string): Promise<Booking> {
-    try {
-      const booking = staticBookings.find(b => b.id === id)
-      if (!booking) {
-        throw new Error("الحجز غير موجود")
-      }
-      return booking as Booking
-    } catch (error) {
-      console.error("Error getting booking by ID from static data:", error)
-      throw new Error("فشل في جلب تفاصيل الحجز")
-    }
+    const booking = await apiRequest<ApiBooking>(`/bookings/${id}`)
+    return mapBooking(booking)
   }
 
-  async createBooking(data: CreateBookingRequest): Promise<Booking> {
-    try {
-      // Simulate creating a new booking
-      const newBooking: StaticBooking = {
-        id: `booking_${Date.now()}`,
-        userId: "user1", // Assume current user
-        carId: data.carId,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        totalDays: Math.ceil((new Date(data.endDate).getTime() - new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24)),
-        totalAmount: 0, // Will be calculated based on car price
-        status: "pending",
-        paymentStatus: "pending",
-        pickupLocation: data.pickupLocation,
-        returnLocation: data.returnLocation,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      
-      // In a real app, this would be saved to the database
-      console.log("Created booking:", newBooking)
-      
-      return newBooking as Booking
-    } catch (error) {
-      console.error("Error creating booking:", error)
-      throw new Error("فشل في إنشاء الحجز")
-    }
+  async cancelBooking(id: string): Promise<Booking> {
+    const booking = await apiRequest<ApiBooking>(`/bookings/${id}/cancel`, { method: "DELETE" })
+    return mapBooking(booking)
   }
 
-  async updateBooking(id: string, data: UpdateBookingRequest): Promise<Booking> {
-    try {
-      const booking = staticBookings.find(b => b.id === id)
-      if (!booking) {
-        throw new Error("الحجز غير موجود")
-      }
-      
-      // Simulate updating the booking
-      const updatedBooking = {
-        ...booking,
-        ...data,
-        updatedAt: new Date().toISOString(),
-      }
-      
-      console.log("Updated booking:", updatedBooking)
-      
-      return updatedBooking as Booking
-    } catch (error) {
-      console.error("Error updating booking:", error)
-      throw new Error("فشل في تحديث الحجز")
-    }
-  }
+  async getBookingsForCar(carId: string): Promise<Booking[]> {
+    const response = await apiRequest<ApiListResponse<ApiBooking> | ApiBooking[]>(
+      `/bookings/vehicle/${carId}`,
+    )
 
-  async cancelBooking(id: string): Promise<void> {
-    try {
-      const booking = staticBookings.find(b => b.id === id)
-      if (!booking) {
-        throw new Error("الحجز غير موجود")
-      }
-      
-      // Simulate cancelling the booking
-      console.log("Cancelled booking:", id)
-      
-      // In a real app, this would update the booking status in the database
-    } catch (error) {
-      console.error("Error cancelling booking:", error)
-      throw new Error("فشل في إلغاء الحجز")
-    }
-  }
-
-  async getAllBookings(filters: BookingFilters = {}): Promise<BookingsResponse> {
-    try {
-      let allBookings = [...staticBookings]
-      
-      // Apply filters
-      if (filters.status) {
-        allBookings = allBookings.filter(booking => booking.status === filters.status)
-      }
-      
-      if (filters.startDate) {
-        allBookings = allBookings.filter(booking => booking.startDate >= filters.startDate!)
-      }
-      
-      if (filters.endDate) {
-        allBookings = allBookings.filter(booking => booking.endDate <= filters.endDate!)
-      }
-      
-      // Apply pagination
-      const page = filters.page || 1
-      const limit = filters.limit || 10
-      const startIndex = (page - 1) * limit
-      const endIndex = startIndex + limit
-      const paginatedBookings = allBookings.slice(startIndex, endIndex)
-      
-      return {
-        bookings: paginatedBookings as Booking[],
-        total: allBookings.length,
-        page,
-        totalPages: Math.ceil(allBookings.length / limit),
-        hasNext: endIndex < allBookings.length,
-        hasPrev: page > 1,
-      }
-    } catch (error) {
-      console.error("Error getting all bookings from static data:", error)
-      throw new Error("فشل في جلب جميع الحجوزات")
-    }
+    const rows = Array.isArray(response) ? response : (response.data ?? [])
+    return rows.map(mapBooking)
   }
 }
+
+export type CreateBookingData = CreateBookingRequest
 
 export const bookingsService = new BookingsService()

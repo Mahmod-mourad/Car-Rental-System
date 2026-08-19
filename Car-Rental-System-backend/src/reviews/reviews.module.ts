@@ -10,7 +10,7 @@ import { BookingsModule } from '../bookings/bookings.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Review, Booking, User, Vehicle]), 
+    TypeOrmModule.forFeature([Review, Booking, User, Vehicle]),
     BookingsModule,
   ],
   controllers: [ReviewsController],

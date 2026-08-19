@@ -76,15 +76,6 @@ export default function CarDetailsPage() {
     return fuelTypes[fuelType as keyof typeof fuelTypes] || fuelType
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      available: { text: "متاحة", variant: "default" as const },
-      rented: { text: "مؤجرة", variant: "secondary" as const },
-      maintenance: { text: "صيانة", variant: "destructive" as const },
-    }
-    return statusConfig[status as keyof typeof statusConfig] || { text: status, variant: "default" as const }
-  }
-
   const nextImage = () => {
     if (car?.images) {
       setCurrentImageIndex((prev) => (prev + 1) % car.images.length)
@@ -139,7 +130,11 @@ export default function CarDetailsPage() {
     )
   }
 
-  const statusBadge = getStatusBadge(car.status)
+
+  // The API tracks availability as a boolean; there is no "maintenance" state.
+  const availabilityBadge = car.isAvailable
+    ? { text: "متاحة للحجز", variant: "default" as const }
+    : { text: "غير متاحة", variant: "secondary" as const }
 
   return (
     <div className="min-h-screen">
@@ -208,7 +203,7 @@ export default function CarDetailsPage() {
 
                 {/* Status Badge */}
                 <div className="absolute top-4 right-4">
-                  <Badge variant={statusBadge.variant}>{statusBadge.text}</Badge>
+                  <Badge variant={availabilityBadge.variant}>{availabilityBadge.text}</Badge>
                 </div>
 
                 {/* Rating */}
@@ -263,7 +258,7 @@ export default function CarDetailsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Gauge className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{car.mileage.toLocaleString()} كم</span>
+                      <span className="text-sm">{car.mileage?.toLocaleString() ?? "-"} كم</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Shield className="h-4 w-4 text-muted-foreground" />
@@ -317,7 +312,7 @@ export default function CarDetailsPage() {
                   <div className="text-sm text-muted-foreground">لليوم الواحد</div>
                 </div>
 
-                {car.status === "available" ? (
+                {car.isAvailable ? (
                   <Button className="w-full" size="lg" asChild>
                     <Link href={`/cars/${car.id}/book`}>احجز الآن</Link>
                   </Button>

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -17,7 +16,6 @@ import { bookingsService, type Booking } from "@/lib/bookings"
 
 export default function BookingConfirmationPage() {
   const params = useParams()
-  const { user } = useAuth()
   const bookingId = params.id as string
 
   const [booking, setBooking] = useState<Booking | null>(null)
@@ -138,7 +136,7 @@ export default function BookingConfirmationPage() {
                         <div>
                           <p className="font-medium">مواقع الاستلام والتسليم</p>
                           <p className="text-sm text-muted-foreground">الاستلام: {booking.pickupLocation}</p>
-                          <p className="text-sm text-muted-foreground">التسليم: {booking.dropoffLocation}</p>
+                          <p className="text-sm text-muted-foreground">التسليم: {booking.returnLocation}</p>
                         </div>
                       </div>
                     </div>
@@ -150,17 +148,6 @@ export default function BookingConfirmationPage() {
                     <CardTitle>تفاصيل التكلفة</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span>المجموع الفرعي</span>
-                      <span>{booking.subtotal} ريال</span>
-                    </div>
-
-                    {booking.discountAmount > 0 && (
-                      <div className="flex justify-between text-blue-600">
-                        <span>الخصم</span>
-                        <span>-{booking.discountAmount} ريال</span>
-                      </div>
-                    )}
 
                     <Separator />
                     <div className="flex justify-between text-lg font-semibold">

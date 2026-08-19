@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -13,19 +12,18 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { CreditCard, Shield } from "lucide-react"
 import { bookingsService, type Booking } from "@/lib/bookings"
-import { paymentsService } from "@/lib/payments"
+import { paymentsService, type PaymentMethod } from "@/lib/payments"
 
 export default function PaymentPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
   const bookingId = params.id as string
 
   const [booking, setBooking] = useState<Booking | null>(null)
   const [loading, setLoading] = useState(true)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [error, setError] = useState("")
-  const [selectedMethod, setSelectedMethod] = useState<"stripe" | "paypal">("stripe")
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("credit_card")
 
   useEffect(() => {
     const loadBooking = async () => {
@@ -51,31 +49,16 @@ export default function PaymentPage() {
     setError("")
 
     try {
-      if (selectedMethod === "stripe") {
-        const { clientSecret } = await paymentsService.createStripePayment({
-          bookingId: booking.id,
-          amount: booking.totalAmount,
-          method: "stripe",
-        })
+      // This records the payment against the booking. The amount is not sent —
+      // the API charges whatever is still owed, so the browser cannot decide what
+      // a rental costs.
+      //
+      // The payment comes back pending. There is no card processor wired up, so an
+      // administrator confirms receipt, and only then does the booking count as
+      // paid. Nothing here can mark it settled.
+      await paymentsService.createPayment(booking.id, selectedMethod)
 
-        // In a real app, you would integrate with Stripe Elements here
-        // For now, we'll simulate a successful payment
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-
-        // Confirm booking after successful payment
-        await bookingsService.confirmBooking(booking.id)
-
-        router.push(`/bookings/${booking.id}/confirmation`)
-      } else if (selectedMethod === "paypal") {
-        const { approvalUrl } = await paymentsService.createPayPalPayment({
-          bookingId: booking.id,
-          amount: booking.totalAmount,
-          method: "paypal",
-        })
-
-        // Redirect to PayPal
-        window.location.href = approvalUrl
-      }
+      router.push(`/bookings/${booking.id}/confirmation`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "حدث خطأ أثناء الدفع")
     } finally {
@@ -150,17 +133,17 @@ export default function PaymentPage() {
                   {/* Stripe Payment */}
                   <div
                     className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                      selectedMethod === "stripe" ? "border-primary bg-primary/5" : "border-border"
+                      selectedMethod === "credit_card" ? "border-primary bg-primary/5" : "border-border"
                     }`}
-                    onClick={() => setSelectedMethod("stripe")}
+                    onClick={() => setSelectedMethod("credit_card")}
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-4 h-4 rounded-full border-2 ${
-                          selectedMethod === "stripe" ? "border-primary bg-primary" : "border-muted-foreground"
+                          selectedMethod === "credit_card" ? "border-primary bg-primary" : "border-muted-foreground"
                         }`}
                       >
-                        {selectedMethod === "stripe" && <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>}
+                        {selectedMethod === "credit_card" && <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>}
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold">بطاقة ائتمان/خصم</h3>
@@ -251,7 +234,7 @@ export default function PaymentPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">مكان التسليم</span>
-                      <span>{booking.dropoffLocation}</span>
+                      <span>{booking.returnLocation}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -263,17 +246,6 @@ export default function PaymentPage() {
                   <CardTitle>تفاصيل التكلفة</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span>المجموع الفرعي</span>
-                    <span>{booking.subtotal} ريال</span>
-                  </div>
-
-                  {booking.discountAmount > 0 && (
-                    <div className="flex justify-between text-blue-600">
-                      <span>الخصم</span>
-                      <span>-{booking.discountAmount} ريال</span>
-                    </div>
-                  )}
 
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">

@@ -45,8 +45,9 @@ export function Header() {
     const loadNotificationCount = async () => {
       if (isAuthenticated) {
         try {
-          const notifications = await notificationsService.getNotifications()
-          setUnreadCount(notifications.filter((n) => !n.isRead).length)
+          // The API returns the unread count alongside the page, so the badge does
+          // not need to pull every notification down to count them.
+          setUnreadCount(await notificationsService.getUnreadCount())
         } catch (error) {
           console.error("Failed to load notifications:", error)
         }
@@ -135,7 +136,7 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      <span>{user.name}</span>
+                      <span>{user.email}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
@@ -168,12 +169,6 @@ export function Header() {
               </div>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/demo-login">
-                    <User className="h-4 w-4 ml-2" />
-                    تجريبي
-                  </Link>
-                </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/login">
                     <User className="h-4 w-4 ml-2" />
@@ -247,14 +242,6 @@ export function Header() {
                   </>
                 ) : (
                   <>
-                    <Link
-                      href="/demo-login"
-                      className="flex items-center gap-2 text-foreground hover:text-primary transition-colors font-medium py-2"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User className="h-4 w-4" />
-                      تسجيل دخول تجريبي
-                    </Link>
                     <Link
                       href="/login"
                       className="flex items-center gap-2 text-foreground hover:text-primary transition-colors font-medium py-2"

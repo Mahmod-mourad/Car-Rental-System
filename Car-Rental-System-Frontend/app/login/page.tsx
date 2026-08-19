@@ -109,9 +109,6 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/80 transition-colors">
-                  نسيت كلمة المرور؟
-                </Link>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

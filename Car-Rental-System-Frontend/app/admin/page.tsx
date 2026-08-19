@@ -3,6 +3,10 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
+import { adminService, type AdminUser } from "@/lib/admin"
+import { carsService, type Car as CarModel } from "@/lib/cars"
+import type { Booking } from "@/lib/bookings"
+import type { Payment } from "@/lib/payments"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -17,47 +21,32 @@ import {
   Car,
   Users,
   Calendar,
-  CreditCard,
   TrendingUp,
   AlertCircle,
-  CheckCircle,
-  Clock,
   Eye,
   Edit,
   Trash2,
   Plus,
-  Search,
-  Filter,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
-import { 
-  staticCars, 
-  staticBookings, 
-  staticPayments, 
-  staticNotifications, 
-  staticUsers,
-  type StaticCar,
-  type StaticBooking,
-  type StaticPayment,
-  type StaticNotification,
-  type StaticUser
-} from "@/lib/static-data"
-import {
-  getCarsFromStorage,
-  getBookingsFromStorage,
-  getUsersFromStorage,
-  getPaymentsFromStorage,
-  saveCarsToStorage,
-  saveBookingsToStorage,
-  updateCarInStorage,
-  updateBookingInStorage,
-  deleteCarFromStorage,
-  deleteBookingFromStorage,
-  initializeLocalStorage,
-  clearAllData
-} from "@/lib/local-storage"
+
+/** The API stores names on the profile, so build one for display. */
+function displayName(user: { firstName?: string | null; lastName?: string | null; email: string }): string {
+  const full = [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
+  return full || user.email
+}
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
 
 interface AdminStats {
   totalUsers: number
@@ -86,55 +75,26 @@ export default function AdminPage() {
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [cars, setCars] = useState<StaticCar[]>([])
-  const [bookings, setBookings] = useState<StaticBooking[]>([])
-  const [users, setUsers] = useState<StaticUser[]>([])
-  const [payments, setPayments] = useState<StaticPayment[]>([])
+  const [cars, setCars] = useState<CarModel[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [payments, setPayments] = useState<Payment[]>([])
 
   useEffect(() => {
-    const loadAdminData = () => {
+    const loadAdminData = async () => {
       setLoading(true)
       setError("")
 
       try {
-        // Initialize localStorage if needed
-        initializeLocalStorage()
-        
-        // Load data from localStorage
-        const carsData = getCarsFromStorage()
-        const bookingsData = getBookingsFromStorage()
-        const usersData = getUsersFromStorage()
-        const paymentsData = getPaymentsFromStorage()
-        
-        setCars(carsData)
-        setBookings(bookingsData)
-        setUsers(usersData)
-        setPayments(paymentsData)
+        const { users, bookings, payments, cars, stats } = await adminService.getDashboard()
 
-        // Calculate stats
-        const totalUsers = usersData.length
-        const totalCars = carsData.length
-        const totalBookings = bookingsData.length
-        const totalRevenue = paymentsData
-          .filter(p => p.status === "completed")
-          .reduce((sum, p) => sum + p.amount, 0)
-        const activeBookings = bookingsData.filter(b => b.status === "confirmed" || b.status === "active").length
-        const pendingBookings = bookingsData.filter(b => b.status === "pending").length
-        const availableCars = carsData.filter(c => c.status === "available").length
-        const rentedCars = carsData.filter(c => c.status === "rented").length
-
-        setStats({
-          totalUsers,
-          totalCars,
-          totalBookings,
-          totalRevenue,
-          activeBookings,
-          pendingBookings,
-          availableCars,
-          rentedCars,
-        })
+        setCars(cars)
+        setBookings(bookings)
+        setUsers(users)
+        setPayments(payments)
+        setStats(stats)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "حدث خطأ أثناء جلب البيانات")
+        setError(err instanceof Error ? err.message : "تعذر تحميل بيانات لوحة التحكم")
       } finally {
         setLoading(false)
       }
@@ -143,24 +103,12 @@ export default function AdminPage() {
     loadAdminData()
   }, [])
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { text: "في الانتظار", variant: "secondary" as const },
-      confirmed: { text: "مؤكد", variant: "default" as const },
-      active: { text: "نشط", variant: "default" as const },
-      completed: { text: "مكتمل", variant: "outline" as const },
-      cancelled: { text: "ملغي", variant: "destructive" as const },
-      available: { text: "متاح", variant: "default" as const },
-      rented: { text: "مؤجر", variant: "secondary" as const },
-      maintenance: { text: "صيانة", variant: "destructive" as const },
-    }
-    return statusConfig[status as keyof typeof statusConfig] || { text: status, variant: "secondary" as const }
-  }
 
   const filteredCars = cars.filter(car => {
     const matchesSearch = car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          car.brand.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || car.status === statusFilter
+    const matchesStatus =
+      statusFilter === "all" || (statusFilter === "available") === car.isAvailable
     return matchesSearch && matchesStatus
   })
 
@@ -174,15 +122,9 @@ export default function AdminPage() {
   // CRUD Functions for Cars
   const deleteCar = async (carId: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Update localStorage
-      deleteCarFromStorage(carId)
-      
-      // Update state
-      setCars(prev => prev.filter(car => car.id !== carId))
-      
+      await carsService.deleteCar(carId)
+      setCars((prev) => prev.filter((car) => car.id !== carId))
+
       toast({
         title: "تم حذف السيارة بنجاح",
         description: "تم حذف السيارة من النظام",
@@ -190,25 +132,17 @@ export default function AdminPage() {
     } catch (error) {
       toast({
         title: "خطأ في حذف السيارة",
-        description: "يرجى المحاولة مرة أخرى",
+        description: error instanceof Error ? error.message : "يرجى المحاولة مرة أخرى",
         variant: "destructive",
       })
     }
   }
 
-  const updateCarStatus = async (carId: string, newStatus: "available" | "rented" | "maintenance") => {
+  const updateCarStatus = async (carId: string, isAvailable: boolean) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Update localStorage
-      updateCarInStorage(carId, { status: newStatus })
-      
-      // Update state
-      setCars(prev => prev.map(car => 
-        car.id === carId ? { ...car, status: newStatus } : car
-      ))
-      
+      await carsService.updateCar(carId, { isAvailable })
+      setCars((prev) => prev.map((car) => (car.id === carId ? { ...car, isAvailable } : car)))
+
       toast({
         title: "تم تحديث حالة السيارة",
         description: "تم تحديث حالة السيارة بنجاح",
@@ -216,26 +150,25 @@ export default function AdminPage() {
     } catch (error) {
       toast({
         title: "خطأ في تحديث حالة السيارة",
-        description: "يرجى المحاولة مرة أخرى",
+        description: error instanceof Error ? error.message : "يرجى المحاولة مرة أخرى",
         variant: "destructive",
       })
     }
   }
 
   // CRUD Functions for Bookings
-  const updateBookingStatus = async (bookingId: string, newStatus: "pending" | "confirmed" | "active" | "completed" | "cancelled") => {
+  const updateBookingStatus = async (
+    bookingId: string,
+    newStatus: "pending" | "confirmed" | "active" | "completed" | "cancelled",
+  ) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Update localStorage
-      updateBookingInStorage(bookingId, { status: newStatus })
-      
-      // Update state
-      setBookings(prev => prev.map(booking => 
-        booking.id === bookingId ? { ...booking, status: newStatus } : booking
-      ))
-      
+      await adminService.setBookingStatus(bookingId, newStatus)
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === bookingId ? { ...booking, status: newStatus } : booking,
+        ),
+      )
+
       toast({
         title: "تم تحديث حالة الحجز",
         description: "تم تحديث حالة الحجز بنجاح",
@@ -243,42 +176,37 @@ export default function AdminPage() {
     } catch (error) {
       toast({
         title: "خطأ في تحديث حالة الحجز",
-        description: "يرجى المحاولة مرة أخرى",
+        description: error instanceof Error ? error.message : "يرجى المحاولة مرة أخرى",
         variant: "destructive",
       })
     }
   }
 
-  const deleteBooking = async (bookingId: string) => {
+  // The API has no delete for bookings — a booking is cancelled, which keeps the
+  // record and frees the dates. Dropping the row would lose history a rental
+  // business needs.
+  const cancelBooking = async (bookingId: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Update localStorage
-      deleteBookingFromStorage(bookingId)
-      
-      // Update state
-      setBookings(prev => prev.filter(booking => booking.id !== bookingId))
-      
+      await adminService.setBookingStatus(bookingId, "cancelled")
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === bookingId ? { ...booking, status: "cancelled" as const } : booking,
+        ),
+      )
+
       toast({
-        title: "تم حذف الحجز بنجاح",
-        description: "تم حذف الحجز من النظام",
+        title: "تم إلغاء الحجز",
+        description: "تم إلغاء الحجز وإتاحة السيارة للحجز مرة أخرى",
       })
     } catch (error) {
       toast({
-        title: "خطأ في حذف الحجز",
-        description: "يرجى المحاولة مرة أخرى",
+        title: "خطأ في إلغاء الحجز",
+        description: error instanceof Error ? error.message : "يرجى المحاولة مرة أخرى",
         variant: "destructive",
       })
     }
   }
 
-  const resetData = () => {
-    if (confirm("هل أنت متأكد من إعادة تعيين جميع البيانات؟ سيتم حذف جميع التغييرات.")) {
-      clearAllData()
-      window.location.reload()
-    }
-  }
 
   if (!user || user.role !== "admin") {
     return (
@@ -309,21 +237,14 @@ export default function AdminPage() {
               <div className="flex items-center gap-4">
                 <Avatar className="w-12 h-12">
                   <AvatarFallback>
-                    {user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
+                    {initials(user.email)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <h1 className="text-3xl font-bold">لوحة الإدارة</h1>
-                  <p className="text-muted-foreground">مرحباً، {user.name}</p>
+                  <p className="text-muted-foreground">مرحباً، {user.email}</p>
                 </div>
               </div>
-              <Button variant="outline" onClick={resetData}>
-                إعادة تعيين البيانات
-              </Button>
             </div>
           </div>
 
@@ -505,7 +426,6 @@ export default function AdminPage() {
                         </TableHeader>
                         <TableBody>
                           {filteredCars.map((car) => {
-                            const statusBadge = getStatusBadge(car.status)
                             return (
                               <TableRow key={car.id}>
                                 <TableCell>
@@ -519,7 +439,10 @@ export default function AdminPage() {
                                 <TableCell>{car.brand}</TableCell>
                                 <TableCell>{car.pricePerDay} ريال</TableCell>
                                 <TableCell>
-                                  <Select value={car.status} onValueChange={(value: "available" | "rented" | "maintenance") => updateCarStatus(car.id, value)}>
+                                  <Select
+                                    value={car.isAvailable ? "available" : "unavailable"}
+                                    onValueChange={(value) => updateCarStatus(car.id, value === "available")}
+                                  >
                                     <SelectTrigger className="w-32">
                                       <SelectValue />
                                     </SelectTrigger>
@@ -609,12 +532,12 @@ export default function AdminPage() {
                         </TableHeader>
                         <TableBody>
                           {filteredBookings.map((booking) => {
-                            const statusBadge = getStatusBadge(booking.status)
+                            const customer = users.find((u) => u.id === booking.userId)
                             return (
                               <TableRow key={booking.id}>
                                 <TableCell className="font-medium">#{booking.id}</TableCell>
                                 <TableCell>{booking.car?.name}</TableCell>
-                                <TableCell>أحمد محمد</TableCell>
+                                <TableCell>{customer ? displayName(customer) : "—"}</TableCell>
                                 <TableCell>
                                   <div className="text-sm">
                                     <div>من: {new Date(booking.startDate).toLocaleDateString("ar-SA")}</div>
@@ -648,7 +571,7 @@ export default function AdminPage() {
                                       size="sm"
                                       onClick={() => {
                                         if (confirm("هل أنت متأكد من حذف هذا الحجز؟")) {
-                                          deleteBooking(booking.id)
+                                          cancelBooking(booking.id)
                                         }
                                       }}
                                     >
@@ -690,14 +613,14 @@ export default function AdminPage() {
                                 <div className="flex items-center gap-3">
                                   <Avatar className="w-8 h-8">
                                     <AvatarFallback>
-                                      {user.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                                      {initials(displayName(user))}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span className="font-medium">{user.name}</span>
+                                  <span className="font-medium">{displayName(user)}</span>
                                 </div>
                               </TableCell>
                               <TableCell>{user.email}</TableCell>
-                              <TableCell>{user.phone}</TableCell>
+                              <TableCell>{user.isActive ? "نشط" : "معطّل"}</TableCell>
                               <TableCell>
                                 <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                                   {user.role === "admin" ? "مدير" : "مستخدم"}
@@ -752,7 +675,8 @@ export default function AdminPage() {
                               <TableCell>
                                 {payment.method === "credit_card" ? "بطاقة ائتمان" : 
                                  payment.method === "debit_card" ? "بطاقة مدى" :
-                                 payment.method === "cash" ? "نقداً" : "تحويل بنكي"}
+                                 payment.method === "paypal" ? "باي بال" :
+                                 payment.method === "bank_transfer" ? "تحويل بنكي" : "أخرى"}
                               </TableCell>
                               <TableCell>
                                 <Badge variant={

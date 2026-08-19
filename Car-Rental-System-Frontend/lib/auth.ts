@@ -1,16 +1,43 @@
-// Authentication utilities and API calls
-import { config } from "./config"
+import { apiRequest, clearStoredToken, getStoredToken, setStoredToken } from "./api-client"
 
-const API_BASE_URL = config.api.baseUrl
+export type UserRole = "admin" | "user" | "owner" | "customer" | "agent"
 
 export interface User {
   id: string
   email: string
-  name: string
-  phone?: string
-  role: "user" | "admin" | "staff"
-  createdAt: string
-  updatedAt: string
+  role: UserRole
+  firstName: string | null
+  lastName: string | null
+  phone: string | null
+  createdAt?: string
+}
+
+interface ApiUser {
+  id: string
+  email: string
+  role: UserRole
+  first_name?: string | null
+  last_name?: string | null
+  phone?: string | null
+  created_at?: string
+}
+
+function mapUser(user: ApiUser): User {
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    firstName: user.first_name ?? null,
+    lastName: user.last_name ?? null,
+    phone: user.phone ?? null,
+    createdAt: user.created_at,
+  }
+}
+
+/** Full name if the profile has one, otherwise the email. */
+export function displayName(user: User): string {
+  const full = [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
+  return full || user.email
 }
 
 export interface LoginCredentials {
@@ -26,161 +53,94 @@ export interface RegisterData {
 }
 
 export interface AuthResponse {
+  access_token: string
   user: User
-  accessToken: string
-  refreshToken: string
+}
+
+export interface UpdateProfileData {
+  firstName?: string
+  lastName?: string
+  phone?: string
+}
+
+/** Splits the single "name" field the form collects into what the API stores. */
+function splitName(name: string): { first_name?: string; last_name?: string } {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return {}
+  return {
+    first_name: parts[0],
+    last_name: parts.length > 1 ? parts.slice(1).join(" ") : undefined,
+  }
 }
 
 class AuthService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("accessToken")
-    return {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-    }
-  }
-
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Check if backend is available
-    if (!config.api.isBackendAvailable()) {
-      throw new Error("Backend server is not available")
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await apiRequest<{ access_token: string; user: ApiUser }>("/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(credentials),
+      auth: false,
+      body: { email: credentials.email, password: credentials.password },
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "فشل في تسجيل الدخول")
-    }
-
-    const data = await response.json()
-
-    // Store token (backend returns access_token)
-    const accessToken = data.access_token || data.accessToken
-    if (accessToken) {
-      localStorage.setItem("accessToken", accessToken)
-    }
-
-    return data
+    setStoredToken(response.access_token)
+    return { access_token: response.access_token, user: mapUser(response.user) }
   }
 
-  async register(userData: RegisterData): Promise<AuthResponse> {
-    // Check if backend is available
-    if (!config.api.isBackendAvailable()) {
-      throw new Error("Backend server is not available")
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+  async register(data: RegisterData): Promise<AuthResponse> {
+    const response = await apiRequest<{ access_token: string; user: ApiUser }>("/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userData),
+      auth: false,
+      body: {
+        email: data.email,
+        password: data.password,
+        phone: data.phone || undefined,
+        ...splitName(data.name),
+      },
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "فشل في إنشاء الحساب")
-    }
-
-    const data = await response.json()
-
-    const accessToken = data.access_token || data.accessToken
-    if (accessToken) {
-      localStorage.setItem("accessToken", accessToken)
-    }
-
-    return data
+    setStoredToken(response.access_token)
+    return { access_token: response.access_token, user: mapUser(response.user) }
   }
 
-  async logout(): Promise<void> {
+  /**
+   * Signing out is a client-side act. The API issues stateless JWTs and keeps no
+   * session to invalidate, so there is nothing to call — dropping the token is the
+   * whole operation. The previous code posted to /auth/logout, which does not exist.
+   */
+  logout(): void {
+    clearStoredToken()
+  }
+
+  async getProfile(): Promise<User | null> {
+    if (!getStoredToken()) return null
+
     try {
-      // Only attempt API call if backend is available
-      if (config.api.isBackendAvailable()) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: "POST",
-          headers: this.getAuthHeaders(),
-        })
-      }
-    } catch (error) {
-      // Silently handle network errors - this is expected when backend is not running
-      console.log("Logout API call failed (backend may not be running):", error)
-    } finally {
-      // Clear tokens regardless of API response
-      localStorage.removeItem("accessToken")
-      localStorage.removeItem("refreshToken")
+      return mapUser(await apiRequest<ApiUser>("/auth/profile"))
+    } catch {
+      // apiRequest clears the token on a 401, so a stale token signs the user out
+      // rather than leaving the UI stuck in a half-logged-in state.
+      return null
     }
   }
 
-  async getProfile(): Promise<User> {
-    // Check if backend is available
-    if (!config.api.isBackendAvailable()) {
-      throw new Error("Backend server is not available")
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-      headers: this.getAuthHeaders(),
+  async updateProfile(changes: UpdateProfileData): Promise<User> {
+    const updated = await apiRequest<ApiUser>("/auth/profile", {
+      method: "PATCH",
+      body: {
+        first_name: changes.firstName,
+        last_name: changes.lastName,
+        phone: changes.phone,
+      },
     })
 
-    if (!response.ok) {
-      throw new Error("فشل في جلب بيانات المستخدم")
-    }
-
-    return response.json()
-  }
-
-  async refreshToken(): Promise<string> {
-    const refreshToken = localStorage.getItem("refreshToken")
-    if (!refreshToken) {
-      throw new Error("لا يوجد refresh token")
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
-    })
-
-    if (!response.ok) {
-      throw new Error("فشل في تجديد التوكن")
-    }
-
-    const data = await response.json()
-    localStorage.setItem("accessToken", data.accessToken)
-
-    return data.accessToken
-  }
-
-  async forgotPassword(email: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "فشل في إرسال رابط إعادة التعيين")
-    }
-  }
-
-  async resetPassword(token: string, password: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, password }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "فشل في إعادة تعيين كلمة المرور")
-    }
+    return mapUser(updated)
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem("accessToken")
+    return getStoredToken() !== null
+  }
+
+  getToken(): string | null {
+    return getStoredToken()
   }
 }
 

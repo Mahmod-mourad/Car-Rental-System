@@ -9,7 +9,6 @@ import {
   Clock, 
   MapPin, 
   Phone, 
-  Mail, 
   Users, 
   Award,
   CheckCircle,

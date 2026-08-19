@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { motion } from 'framer-motion';
 import { ShieldCheck, Clock, Tag, Headphones, Car, MapPin, Award } from 'lucide-react';
 
@@ -92,12 +94,12 @@ export default function WhyChooseUs() {
               احجز سيارتك الآن واستمتع بأفضل العروض والخصومات الحصرية لعملائنا الكرام
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <a
+              <Link
                 href="/cars"
                 className="px-6 py-3 bg-white text-blue-700 font-medium rounded-lg hover:bg-gray-100 transition-colors duration-200"
               >
                 تصفح السيارات
-              </a>
+              </Link>
               <a
                 href="/contact"
                 className="px-6 py-3 border-2 border-white text-white font-medium rounded-lg hover:bg-white/10 transition-colors duration-200"

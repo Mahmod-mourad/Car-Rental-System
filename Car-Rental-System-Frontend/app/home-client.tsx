@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Car, Shield, Clock, Star, Search, Calendar, MapPin } from "lucide-react";
+import { Car, Shield, Star, Search, Calendar, MapPin } from "lucide-react";
 import Link from "next/link";
 
 // Dynamic imports with no SSR to avoid hydration issues
@@ -14,55 +14,7 @@ const TestimonialsSection = dynamic(() => import('@/components/testimonials/Test
 const FAQSection = dynamic(() => import('@/components/faq/FAQSection'), { ssr: false });
 
 export default function HomeClient() {
-  const featuredCars = [
-    {
-      id: 1,
-      name: "تويوتا كامري 2024",
-      image: "/toyota-camry-2024-silver.png",
-      price: "150",
-      rating: 4.8,
-      features: ["أوتوماتيك", "5 مقاعد", "بنزين", "مكيف"],
-    },
-    {
-      id: 2,
-      name: "هيونداي إلنترا 2024",
-      image: "/hyundai-elantra-2024-white.png",
-      price: "120",
-      rating: 4.6,
-      features: ["أوتوماتيك", "5 مقاعد", "بنزين", "مكيف"],
-    },
-    {
-      id: 3,
-      name: "نيسان التيما 2024",
-      image: "/nissan-altima-2024-black.png",
-      price: "140",
-      rating: 4.7,
-      features: ["أوتوماتيك", "5 مقاعد", "بنزين", "مكيف"],
-    },
-  ];
 
-  const features = [
-    {
-      icon: Shield,
-      title: "أمان وموثوقية",
-      description: "جميع سياراتنا مؤمنة بالكامل ومفحوصة دورياً",
-    },
-    {
-      icon: Clock,
-      title: "خدمة 24/7",
-      description: "نحن متاحون على مدار الساعة لخدمتكم",
-    },
-    {
-      icon: Car,
-      title: "أسطول حديث",
-      description: "سيارات حديثة ومتنوعة تناسب جميع الاحتياجات",
-    },
-    {
-      icon: Star,
-      title: "خدمة مميزة",
-      description: "تقييم عالي من عملائنا الكرام",
-    },
-  ];
 
   return (
     <div className="min-h-screen">

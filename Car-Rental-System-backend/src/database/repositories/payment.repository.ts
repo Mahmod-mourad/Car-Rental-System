@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Payment, PaymentStatus } from '../entities/payment.entity';
 import { BaseRepository } from './base.repository';
 
@@ -54,7 +54,7 @@ export class PaymentRepository extends BaseRepository<Payment> {
     if (transactionId) {
       updateData.transaction_id = transactionId;
     }
-    
+
     await this.paymentRepository.update(paymentId, updateData);
   }
 

@@ -21,8 +21,16 @@ import {
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { staticCars, type StaticCar } from "@/lib/static-data"
-import { getCarsFromStorage, updateCarInStorage } from "@/lib/local-storage"
+import {
+  CATEGORY_OPTIONS,
+  FUEL_OPTIONS,
+  TRANSMISSION_OPTIONS,
+  carsService,
+  type Car as CarModel,
+  type CarCategory,
+  type FuelType,
+  type Transmission,
+} from "@/lib/cars"
 
 export default function EditCarPage() {
   const router = useRouter()
@@ -30,7 +38,7 @@ export default function EditCarPage() {
   const carId = params.id as string
   
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [car, setCar] = useState<StaticCar | null>(null)
+  const [car, setCar] = useState<CarModel | null>(null)
   const [formData, setFormData] = useState({
     brand: "",
     model: "",
@@ -40,8 +48,6 @@ export default function EditCarPage() {
     fuelType: "",
     seats: "",
     pricePerDay: "",
-    pricePerWeek: "",
-    pricePerMonth: "",
     mileage: "",
     color: "",
     description: "",
@@ -49,33 +55,10 @@ export default function EditCarPage() {
     images: [] as string[],
     isAvailable: true,
     location: "",
-    status: "available" as "available" | "rented" | "maintenance",
   })
 
   const [newFeature, setNewFeature] = useState("")
   const [newImage, setNewImage] = useState("")
-
-  const categories = [
-    "اقتصادية",
-    "عائلية", 
-    "رياضية",
-    "فاخرة",
-    "SUV",
-    "فان",
-    "شاحنة"
-  ]
-
-  const transmissions = [
-    "أوتوماتيك",
-    "يدوي"
-  ]
-
-  const fuelTypes = [
-    "بنزين",
-    "ديزل", 
-    "كهربائي",
-    "هجين"
-  ]
 
   const colors = [
     "أبيض",
@@ -89,38 +72,45 @@ export default function EditCarPage() {
   ]
 
   useEffect(() => {
-    // Find the car by ID from localStorage
-    const cars = getCarsFromStorage()
-    const foundCar = cars.find(c => c.id === carId)
-    if (foundCar) {
-      setCar(foundCar)
-      setFormData({
-        brand: foundCar.brand,
-        model: foundCar.model,
-        year: foundCar.year.toString(),
-        category: foundCar.category,
-        transmission: foundCar.transmission || "",
-        fuelType: foundCar.fuelType || "",
-        seats: foundCar.seats?.toString() || "",
-        pricePerDay: foundCar.pricePerDay.toString(),
-        pricePerWeek: foundCar.pricePerWeek?.toString() || "",
-        pricePerMonth: foundCar.pricePerMonth?.toString() || "",
-        mileage: foundCar.mileage?.toString() || "",
-        color: foundCar.color || "",
-        description: foundCar.description || "",
-        features: foundCar.features || [],
-        images: foundCar.images || [],
-        isAvailable: foundCar.isAvailable,
-        location: foundCar.location || "",
-        status: foundCar.status,
+    let cancelled = false
+
+    carsService
+      .getCarById(carId)
+      .then((foundCar) => {
+        if (cancelled) return
+
+        setCar(foundCar)
+        setFormData({
+          brand: foundCar.brand,
+          model: foundCar.model,
+          year: foundCar.year.toString(),
+          category: foundCar.category,
+          transmission: foundCar.transmission,
+          fuelType: foundCar.fuelType,
+          seats: foundCar.seats.toString(),
+          pricePerDay: foundCar.pricePerDay.toString(),
+          mileage: foundCar.mileage?.toString() || "",
+          color: foundCar.color || "",
+          description: foundCar.description || "",
+          features: foundCar.features,
+          images: foundCar.images,
+          isAvailable: foundCar.isAvailable,
+          location: foundCar.location || "",
+        })
       })
-    } else {
-      toast({
-        title: "خطأ",
-        description: "لم يتم العثور على السيارة",
-        variant: "destructive",
+      .catch((error) => {
+        if (cancelled) return
+
+        toast({
+          title: "خطأ",
+          description: error instanceof Error ? error.message : "لم يتم العثور على السيارة",
+          variant: "destructive",
+        })
+        router.push("/admin")
       })
-      router.push("/admin")
+
+    return () => {
+      cancelled = true
     }
   }, [carId, router])
 
@@ -191,37 +181,24 @@ export default function EditCarPage() {
         return
       }
 
-      // Create updated car object
-      const updatedCar: Partial<StaticCar> = {
-        name: `${formData.brand} ${formData.model} ${formData.year}`,
+      await carsService.updateCar(carId, {
         brand: formData.brand,
         model: formData.model,
-        year: parseInt(formData.year),
-        category: formData.category,
-        categoryId: formData.category.toLowerCase().replace(/\s+/g, '_'),
-        pricePerDay: parseInt(formData.pricePerDay),
-        pricePerWeek: formData.pricePerWeek ? parseInt(formData.pricePerWeek) : undefined,
-        pricePerMonth: formData.pricePerMonth ? parseInt(formData.pricePerMonth) : undefined,
-        description: formData.description,
+        year: Number.parseInt(formData.year, 10),
+        category: formData.category as CarCategory,
+        transmission: formData.transmission as Transmission,
+        fuelType: formData.fuelType as FuelType,
+        seats: formData.seats ? Number.parseInt(formData.seats, 10) : undefined,
+        pricePerDay: Number.parseFloat(formData.pricePerDay),
+        description: formData.description || undefined,
+        color: formData.color || undefined,
+        mileage: formData.mileage ? Number.parseInt(formData.mileage, 10) : undefined,
+        location: formData.location || undefined,
         features: formData.features,
         images: formData.images,
         isAvailable: formData.isAvailable,
-        status: formData.status,
-        transmission: formData.transmission || undefined,
-        fuelType: formData.fuelType || undefined,
-        seats: formData.seats ? parseInt(formData.seats) : undefined,
-        mileage: formData.mileage ? parseInt(formData.mileage) : undefined,
-        color: formData.color || undefined,
-        location: formData.location || undefined,
-        updatedAt: new Date().toISOString(),
-      }
+      })
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Update in localStorage
-      updateCarInStorage(carId, updatedCar)
-      
       toast({
         title: "تم تحديث السيارة بنجاح",
         description: "تم حفظ التغييرات في النظام",
@@ -232,7 +209,7 @@ export default function EditCarPage() {
     } catch (error) {
       toast({
         title: "خطأ في تحديث السيارة",
-        description: "يرجى المحاولة مرة أخرى",
+        description: error instanceof Error ? error.message : "يرجى المحاولة مرة أخرى",
         variant: "destructive",
       })
     } finally {
@@ -347,9 +324,9 @@ export default function EditCarPage() {
                         <SelectValue placeholder="اختر الفئة" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {CATEGORY_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -362,9 +339,9 @@ export default function EditCarPage() {
                         <SelectValue placeholder="اختر ناقل الحركة" />
                       </SelectTrigger>
                       <SelectContent>
-                        {transmissions.map((transmission) => (
-                          <SelectItem key={transmission} value={transmission}>
-                            {transmission}
+                        {TRANSMISSION_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -377,9 +354,9 @@ export default function EditCarPage() {
                         <SelectValue placeholder="اختر نوع الوقود" />
                       </SelectTrigger>
                       <SelectContent>
-                        {fuelTypes.map((fuelType) => (
-                          <SelectItem key={fuelType} value={fuelType}>
-                            {fuelType}
+                        {FUEL_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -438,20 +415,6 @@ export default function EditCarPage() {
                     />
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">حالة السيارة</Label>
-                  <Select value={formData.status} onValueChange={(value: "available" | "rented" | "maintenance") => handleSelectChange("status", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الحالة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="available">متاح</SelectItem>
-                      <SelectItem value="rented">مؤجر</SelectItem>
-                      <SelectItem value="maintenance">صيانة</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </CardContent>
             </Card>
 
@@ -476,30 +439,6 @@ export default function EditCarPage() {
                       placeholder="200"
                       min="0"
                       required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pricePerWeek">السعر الأسبوعي</Label>
-                    <Input
-                      id="pricePerWeek"
-                      name="pricePerWeek"
-                      type="number"
-                      value={formData.pricePerWeek}
-                      onChange={handleInputChange}
-                      placeholder="1200"
-                      min="0"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pricePerMonth">السعر الشهري</Label>
-                    <Input
-                      id="pricePerMonth"
-                      name="pricePerMonth"
-                      type="number"
-                      value={formData.pricePerMonth}
-                      onChange={handleInputChange}
-                      placeholder="4000"
-                      min="0"
                     />
                   </div>
                 </div>

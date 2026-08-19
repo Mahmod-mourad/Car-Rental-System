@@ -1,4 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToOne, OneToMany } from 'typeorm';
+import {
+  UpdateDateColumn,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToOne,
+  OneToMany,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Vehicle } from './vehicle.entity';
 import { Payment } from './payment.entity';
@@ -50,10 +60,19 @@ export class Booking {
   @Column({ type: 'varchar', length: 500, nullable: true })
   notes: string | null;
 
-  @Column('timestamp')
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  pickup_location: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  return_location: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  driver_license: string | null;
+
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  @Column('timestamp')
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 
   @ManyToOne(() => User, (user) => user.bookings)

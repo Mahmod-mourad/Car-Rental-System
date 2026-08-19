@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
-export class AddRatingAndFeaturedToVehicles1758101851921 implements MigrationInterface {
+export class AddRatingAndFeaturedToVehicles1758101851921
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.addColumn(
       'vehicles',

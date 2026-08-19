@@ -24,16 +24,12 @@ export function CarCard({ car }: CarCardProps) {
     return fuelTypes[fuelType as keyof typeof fuelTypes] || fuelType
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      available: { text: "متاحة", variant: "default" as const },
-      rented: { text: "مؤجرة", variant: "secondary" as const },
-      maintenance: { text: "صيانة", variant: "destructive" as const },
-    }
-    return statusConfig[status as keyof typeof statusConfig] || { text: status, variant: "default" as const }
-  }
+  // The API tracks a vehicle as available or not. There is no separate
+  // "maintenance" state, so the card no longer claims one.
+  const availabilityBadge = car.isAvailable
+    ? { text: "متاحة", variant: "default" as const }
+    : { text: "غير متاحة", variant: "secondary" as const }
 
-  const statusBadge = getStatusBadge(car.status)
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
@@ -44,7 +40,7 @@ export function CarCard({ car }: CarCardProps) {
           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute top-4 right-4">
-          <Badge variant={statusBadge.variant}>{statusBadge.text}</Badge>
+          <Badge variant={availabilityBadge.variant}>{availabilityBadge.text}</Badge>
         </div>
         {car.rating > 0 && (
           <div className="absolute top-4 left-4 bg-black/70 text-white px-2 py-1 rounded flex items-center gap-1 text-sm">
@@ -94,7 +90,7 @@ export function CarCard({ car }: CarCardProps) {
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/cars/${car.id}`}>التفاصيل</Link>
               </Button>
-              {car.status === "available" && (
+              {car.isAvailable && (
                 <Button size="sm" asChild>
                   <Link href={`/cars/${car.id}/book`}>احجز الآن</Link>
                 </Button>
