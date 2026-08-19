@@ -10,12 +10,6 @@ export default () => ({
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   
-  // Supabase
-  supabase: {
-    url: getEnvVar('SUPABASE_URL', ''),
-    key: getEnvVar('SUPABASE_KEY', ''),
-    serviceRole: getEnvVar('SUPABASE_SERVICE_ROLE', ''),
-  },
 
   // JWT
   jwt: {

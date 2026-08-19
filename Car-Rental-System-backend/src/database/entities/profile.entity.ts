@@ -6,17 +6,17 @@ export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true })
-  first_name: string;
+  @Column({ type: 'varchar', nullable: true })
+  first_name: string | null;
 
-  @Column({ nullable: true })
-  last_name: string;
+  @Column({ type: 'varchar', nullable: true })
+  last_name: string | null;
 
-  @Column({ nullable: true })
-  phone: string;
+  @Column({ type: 'varchar', nullable: true })
+  phone: string | null;
 
-  @Column({ nullable: true })
-  avatar_url: string;
+  @Column({ type: 'varchar', nullable: true })
+  avatar_url: string | null;
 
   @Column('jsonb', { nullable: true })
   address: {
