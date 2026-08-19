@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, IsNotEmpty } from 'class-validator';
 
 // Define the payment method enum
 export enum PaymentMethod {
@@ -16,10 +16,8 @@ export class CreatePaymentDto {
   @IsNotEmpty()
   booking_id: string;
 
-  @ApiProperty({ description: 'Payment amount' })
-  @IsNumber()
-  @Min(0.01)
-  amount: number;
+  // The amount is not accepted from the client. The server charges whatever is
+  // still owed on the booking. See PaymentsService.create.
 
   @ApiProperty({ enum: PaymentMethod, description: 'Payment method' })
   @IsEnum(PaymentMethod)
