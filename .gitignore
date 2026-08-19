@@ -11,7 +11,7 @@ coverage/
 out/
 
 # Production
-build
+build/
 
 # Misc
 .DS_Store
@@ -39,7 +39,8 @@ npm-debug.log*
 *.local
 
 # Build directories
-/dist
+dist/
+.nest/
 
 # Cache
 .cache/
@@ -54,3 +55,7 @@ npm-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Local scratch / credentials
+test-auth.json
+*.local.json
