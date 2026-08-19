@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Vehicle, VehicleType, FuelType, TransmissionType } from '../entities/vehicle.entity';
+import {
+  Vehicle,
+  VehicleType,
+  FuelType,
+  TransmissionType,
+} from '../entities/vehicle.entity';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
@@ -60,13 +65,16 @@ export class VehicleRepository extends BaseRepository<Vehicle> {
   }
 
   async findVehiclesByOwner(ownerId: string): Promise<Vehicle[]> {
-    return this.vehicleRepository.find({ 
+    return this.vehicleRepository.find({
       where: { owner_id: ownerId },
       relations: ['bookings'],
     });
   }
 
-  async updateVehicleAvailability(id: string, available: boolean): Promise<void> {
+  async updateVehicleAvailability(
+    id: string,
+    available: boolean,
+  ): Promise<void> {
     await this.vehicleRepository.update(id, { available });
   }
 }

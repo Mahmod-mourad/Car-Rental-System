@@ -34,7 +34,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     NotificationsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         secret: configService.get('jwt.secret'),
         signOptions: { expiresIn: configService.get('jwt.expiresIn') },
       }),

@@ -1,14 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions, Like, Between, Not, IsNull, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
+import { createPoint } from '../common/types/postgis.types';
 import { Vehicle, VehicleType } from '../database/entities/vehicle.entity';
-import { User } from '../database/entities/user.entity';
+import { User, UserRole } from '../database/entities/user.entity';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { subMonths } from 'date-fns';
 
-export type VehicleSortField = 'price' | 'rating' | 'year' | 'name'
-export type SortDirection = 'asc' | 'desc'
+export type VehicleSortField = 'price' | 'rating' | 'year' | 'name';
+export type SortDirection = 'asc' | 'desc';
 
 export interface SearchFilters {
   make?: string;
@@ -45,7 +50,10 @@ export class VehiclesService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async create(createVehicleDto: CreateVehicleDto, userId: string): Promise<Vehicle> {
+  async create(
+    createVehicleDto: CreateVehicleDto,
+    userId: string,
+  ): Promise<Vehicle> {
     const owner = await this.usersRepository.findOne({ where: { id: userId } });
     if (!owner) {
       throw new NotFoundException('Owner not found');
@@ -58,25 +66,27 @@ export class VehiclesService {
       owner,
     });
 
-    // A {lat, lng} pair cannot be assigned to a geometry column directly — it has to
-    // go in as a PostGIS point, which is what the radius search reads.
+    // A {lat, lng} pair cannot go into a geometry column directly. TypeORM accepts
+    // GeoJSON for geometry columns, so the coordinates become a proper point —
+    // which is what the radius search reads.
     if (location) {
-      vehicle.location = () =>
-        `ST_SetSRID(ST_MakePoint(${Number(location.lng)}, ${Number(location.lat)}), 4326)`;
+      vehicle.location = createPoint(location.lng, location.lat);
     }
 
     return this.vehiclesRepository.save(vehicle);
   }
 
-  async findAll(filters: SearchFilters = {}): Promise<{ data: Vehicle[]; count: number }> {
-    const { 
-      make, 
-      model, 
-      minYear, 
-      maxYear, 
-      type, 
-      minPrice, 
-      maxPrice, 
+  async findAll(
+    filters: SearchFilters = {},
+  ): Promise<{ data: Vehicle[]; count: number }> {
+    const {
+      make,
+      model,
+      minYear,
+      maxYear,
+      type,
+      minPrice,
+      maxPrice,
       minRating,
       isFeatured,
       available,
@@ -88,20 +98,25 @@ export class VehiclesService {
       sortOrder = 'asc',
       location,
       page = 1,
-      limit = 10
+      limit = 10,
     } = filters;
 
-    const query = this.vehiclesRepository.createQueryBuilder('vehicle')
+    const query = this.vehiclesRepository
+      .createQueryBuilder('vehicle')
       .leftJoinAndSelect('vehicle.owner', 'owner')
       .leftJoinAndSelect('vehicle.reviews', 'reviews')
       .where('1=1');
 
     if (make) {
-      query.andWhere('LOWER(vehicle.make) LIKE LOWER(:make)', { make: `%${make}%` });
+      query.andWhere('LOWER(vehicle.make) LIKE LOWER(:make)', {
+        make: `%${make}%`,
+      });
     }
 
     if (model) {
-      query.andWhere('LOWER(vehicle.model) LIKE LOWER(:model)', { model: `%${model}%` });
+      query.andWhere('LOWER(vehicle.model) LIKE LOWER(:model)', {
+        model: `%${model}%`,
+      });
     }
 
     if (minYear) {
@@ -171,7 +186,7 @@ export class VehiclesService {
             ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
             :radius * 1000
           )`,
-          { lng, lat, radius: radiusKm }
+          { lng, lat, radius: radiusKm },
         );
       }
     }
@@ -213,10 +228,14 @@ export class VehiclesService {
     return vehicle;
   }
 
-  async update(id: string, updateVehicleDto: UpdateVehicleDto, userId: string): Promise<Vehicle> {
+  async update(
+    id: string,
+    updateVehicleDto: UpdateVehicleDto,
+    userId: string,
+  ): Promise<Vehicle> {
     const vehicle = await this.vehiclesRepository.findOne({
       where: { id },
-      relations: ['owner']
+      relations: ['owner'],
     });
 
     if (!vehicle) {
@@ -225,40 +244,45 @@ export class VehiclesService {
 
     // Check if the user is the owner or an admin
     const user = await this.usersRepository.findOne({ where: { id: userId } });
-    const isAdmin = user?.role === 'admin';
-    
+    const isAdmin = user?.role === UserRole.ADMIN;
+
     if (vehicle.owner.id !== userId && !isAdmin) {
-      throw new ForbiddenException('You are not authorized to update this vehicle');
+      throw new ForbiddenException(
+        'You are not authorized to update this vehicle',
+      );
     }
 
-    // Only update allowed fields
-    const { type, ...updateData } = updateVehicleDto;
-    const updatedVehicle = {
-      ...vehicle,
-      ...updateData,
-      // Handle type separately to ensure it's a valid VehicleType
-      ...(type && { type: type as VehicleType }),
-    };
+    // location arrives as {lat, lng} and has to become a point, so it is applied
+    // separately from the plain columns.
+    const { location, ...updateData } = updateVehicleDto;
 
-    return this.vehiclesRepository.save(updatedVehicle);
+    Object.assign(vehicle, updateData);
+
+    if (location) {
+      vehicle.location = createPoint(location.lng, location.lat);
+    }
+
+    return this.vehiclesRepository.save(vehicle);
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const vehicle = await this.vehiclesRepository.findOne({ 
-      where: { id }, 
-      relations: ['owner'] 
+    const vehicle = await this.vehiclesRepository.findOne({
+      where: { id },
+      relations: ['owner'],
     });
-    
+
     if (!vehicle) {
       throw new NotFoundException('Vehicle not found');
     }
 
     // Check if user is the owner or an admin
     const user = await this.usersRepository.findOne({ where: { id: userId } });
-    const isAdmin = user?.role === 'admin';
-    
+    const isAdmin = user?.role === UserRole.ADMIN;
+
     if (vehicle.owner.id !== userId && !isAdmin) {
-      throw new ForbiddenException('You do not have permission to delete this vehicle');
+      throw new ForbiddenException(
+        'You do not have permission to delete this vehicle',
+      );
     }
 
     await this.vehiclesRepository.remove(vehicle);
@@ -266,14 +290,14 @@ export class VehiclesService {
 
   async findFeatured(limit: number = 6): Promise<Vehicle[]> {
     return this.vehiclesRepository.find({
-      where: { 
+      where: {
         is_featured: true,
-        available: true 
+        available: true,
       },
       relations: ['reviews', 'owner'],
-      order: { 
+      order: {
         average_rating: 'DESC',
-        created_at: 'DESC' 
+        created_at: 'DESC',
       },
       take: limit,
     });
@@ -281,15 +305,15 @@ export class VehiclesService {
 
   async findLatest(limit: number = 6): Promise<Vehicle[]> {
     const oneMonthAgo = subMonths(new Date(), 1);
-    
+
     return this.vehiclesRepository.find({
-      where: { 
+      where: {
         available: true,
-        created_at: MoreThanOrEqual(oneMonthAgo)
+        created_at: MoreThanOrEqual(oneMonthAgo),
       },
       relations: ['reviews', 'owner'],
       order: {
-        created_at: 'DESC' as const
+        created_at: 'DESC' as const,
       },
       take: limit,
     });
@@ -298,7 +322,7 @@ export class VehiclesService {
   async findSimilar(vehicleId: string, limit: number = 4): Promise<Vehicle[]> {
     const vehicle = await this.vehiclesRepository.findOne({
       where: { id: vehicleId },
-      relations: ['reviews']
+      relations: ['reviews'],
     });
 
     if (!vehicle) {
@@ -311,9 +335,10 @@ export class VehiclesService {
       .leftJoinAndSelect('vehicle.owner', 'owner')
       .where('vehicle.id != :vehicleId', { vehicleId })
       .andWhere('vehicle.available = :available', { available: true })
-      .andWhere(qb => {
+      .andWhere((qb) => {
         // Find vehicles with same type or same make
-        const subQuery = qb.subQuery()
+        const subQuery = qb
+          .subQuery()
           .select('v.id')
           .from('vehicle', 'v')
           .where('v.type = :type', { type: vehicle.type })
@@ -322,7 +347,10 @@ export class VehiclesService {
           .getQuery();
         return `vehicle.id IN ${subQuery}`;
       })
-      .orderBy('(SELECT AVG(r.rating) FROM review r WHERE r.vehicle_id = vehicle.id)', 'DESC')
+      .orderBy(
+        '(SELECT AVG(r.rating) FROM review r WHERE r.vehicle_id = vehicle.id)',
+        'DESC',
+      )
       .addOrderBy('vehicle.created_at', 'DESC')
       .take(limit)
       .getMany();
@@ -330,7 +358,9 @@ export class VehiclesService {
     return similarVehicles;
   }
 
-  async getPopularBrands(limit: number = 5): Promise<{brand: string, count: number}[]> {
+  async getPopularBrands(
+    limit: number = 5,
+  ): Promise<{ brand: string; count: number }[]> {
     const result = await this.vehiclesRepository
       .createQueryBuilder('vehicle')
       .select('vehicle.make', 'brand')
@@ -343,7 +373,7 @@ export class VehiclesService {
     return result;
   }
 
-  async getPriceRange(): Promise<{min: number, max: number}> {
+  async getPriceRange(): Promise<{ min: number; max: number }> {
     const result = await this.vehiclesRepository
       .createQueryBuilder('vehicle')
       .select('MIN(vehicle.price_per_day)', 'min')
@@ -353,7 +383,7 @@ export class VehiclesService {
 
     return {
       min: parseFloat(result.min) || 0,
-      max: parseFloat(result.max) || 0
+      max: parseFloat(result.max) || 0,
     };
   }
 
@@ -364,14 +394,22 @@ export class VehiclesService {
     });
   }
 
-  async updateAvailability(id: string, available: boolean, userId: string): Promise<Vehicle> {
+  async updateAvailability(
+    id: string,
+    available: boolean,
+    userId: string,
+  ): Promise<Vehicle> {
     const vehicle = await this.findOne(id);
-    
+
     // Check if the user is the owner or an admin
     if (vehicle.owner.id !== userId) {
-      const user = await this.usersRepository.findOne({ where: { id: userId } });
-      if (!user || user.role !== 'admin') {
-        throw new ForbiddenException('You are not authorized to update this vehicle');
+      const user = await this.usersRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user || user.role !== UserRole.ADMIN) {
+        throw new ForbiddenException(
+          'You are not authorized to update this vehicle',
+        );
       }
     }
 

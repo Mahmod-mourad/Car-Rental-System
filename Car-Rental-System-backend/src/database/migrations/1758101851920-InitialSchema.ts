@@ -1,47 +1,47 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InitialSchema1758101851920 implements MigrationInterface {
-    name = 'InitialSchema1758101851920'
+  name = 'InitialSchema1758101851920';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Enable PostGIS extension
-        await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "postgis"`);
-        
-        // Create enum types
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Enable PostGIS extension
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "postgis"`);
+
+    // Create enum types
+    await queryRunner.query(`
             CREATE TYPE "public"."users_role_enum" AS ENUM('admin', 'customer', 'agent')
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TYPE "public"."vehicles_type_enum" AS ENUM('sedan', 'suv', 'truck', 'van', 'luxury')
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TYPE "public"."vehicles_transmission_enum" AS ENUM('automatic', 'manual')
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TYPE "public"."vehicles_fuel_type_enum" AS ENUM('gasoline', 'diesel', 'electric', 'hybrid')
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TYPE "public"."bookings_status_enum" AS ENUM('pending', 'confirmed', 'active', 'completed', 'cancelled')
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TYPE "public"."bookings_payment_status_enum" AS ENUM('pending', 'paid', 'refunded', 'failed')
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TYPE "public"."payments_payment_method_enum" AS ENUM('credit_card', 'debit_card', 'paypal', 'bank_transfer', 'other')
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TYPE "public"."payments_status_enum" AS ENUM('pending', 'completed', 'failed', 'refunded', 'partially_refunded')
         `);
 
-        // Create users table
-        await queryRunner.query(`
+    // Create users table
+    await queryRunner.query(`
             CREATE TABLE "users" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "email" character varying NOT NULL,
@@ -56,8 +56,8 @@ export class InitialSchema1758101851920 implements MigrationInterface {
             )
         `);
 
-        // Create profiles table
-        await queryRunner.query(`
+    // Create profiles table
+    await queryRunner.query(`
             CREATE TABLE "profiles" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "first_name" character varying,
@@ -72,8 +72,8 @@ export class InitialSchema1758101851920 implements MigrationInterface {
             )
         `);
 
-        // Create vehicles table
-        await queryRunner.query(`
+    // Create vehicles table
+    await queryRunner.query(`
             CREATE TABLE "vehicles" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "make" character varying NOT NULL,
@@ -96,8 +96,8 @@ export class InitialSchema1758101851920 implements MigrationInterface {
             )
         `);
 
-        // Create bookings table
-        await queryRunner.query(`
+    // Create bookings table
+    await queryRunner.query(`
             CREATE TABLE "bookings" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "start_date" date NOT NULL,
@@ -115,8 +115,8 @@ export class InitialSchema1758101851920 implements MigrationInterface {
             )
         `);
 
-        // Create payments table
-        await queryRunner.query(`
+    // Create payments table
+    await queryRunner.query(`
             CREATE TABLE "payments" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "amount" numeric(10,2) NOT NULL,
@@ -131,8 +131,8 @@ export class InitialSchema1758101851920 implements MigrationInterface {
             )
         `);
 
-        // Create reviews table
-        await queryRunner.query(`
+    // Create reviews table
+    await queryRunner.query(`
             CREATE TABLE "reviews" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "rating" integer NOT NULL,
@@ -150,28 +150,44 @@ export class InitialSchema1758101851920 implements MigrationInterface {
                 CONSTRAINT "FK_bbd6ac6e3e6a8f8c6e0e8692d6a" FOREIGN KEY ("booking_id") REFERENCES "bookings"("id") ON DELETE NO ACTION ON UPDATE NO ACTION
             )
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop tables in reverse order to avoid foreign key constraint errors
-        await queryRunner.query(`DROP TABLE IF EXISTS "reviews" CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "payments" CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "bookings" CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "vehicles" CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "profiles" CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "users" CASCADE`);
-        
-        // Drop enum types
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."payments_status_enum" CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."payments_payment_method_enum" CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."bookings_payment_status_enum" CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."bookings_status_enum" CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."vehicles_fuel_type_enum" CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."vehicles_transmission_enum" CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."vehicles_type_enum" CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."users_role_enum" CASCADE`);
-        
-        // Drop PostGIS extension
-        await queryRunner.query(`DROP EXTENSION IF EXISTS "postgis" CASCADE`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop tables in reverse order to avoid foreign key constraint errors
+    await queryRunner.query(`DROP TABLE IF EXISTS "reviews" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "payments" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "bookings" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "vehicles" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "profiles" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "users" CASCADE`);
+
+    // Drop enum types
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."payments_status_enum" CASCADE`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."payments_payment_method_enum" CASCADE`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."bookings_payment_status_enum" CASCADE`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."bookings_status_enum" CASCADE`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."vehicles_fuel_type_enum" CASCADE`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."vehicles_transmission_enum" CASCADE`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."vehicles_type_enum" CASCADE`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."users_role_enum" CASCADE`,
+    );
+
+    // Drop PostGIS extension
+    await queryRunner.query(`DROP EXTENSION IF EXISTS "postgis" CASCADE`);
+  }
 }

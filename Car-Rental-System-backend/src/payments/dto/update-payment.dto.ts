@@ -1,15 +1,8 @@
+import { PaymentStatus } from '../../database/entities/payment.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { PartialType } from '@nestjs/swagger';
-import { CreatePaymentDto, PaymentMethod } from './create-payment.dto';
-
-export enum PaymentStatus {
-  PENDING = 'pending',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  REFUNDED = 'refunded',
-  PARTIALLY_REFUNDED = 'partially_refunded',
-}
+import { CreatePaymentDto } from './create-payment.dto';
 
 export class UpdatePaymentDto extends PartialType(CreatePaymentDto) {
   @ApiProperty({ enum: PaymentStatus, required: false })
@@ -22,3 +15,7 @@ export class UpdatePaymentDto extends PartialType(CreatePaymentDto) {
   @IsOptional()
   failure_reason?: string;
 }
+
+// Re-exported so existing imports of PaymentStatus from this module keep working,
+// while there is only one definition of it.
+export { PaymentStatus };

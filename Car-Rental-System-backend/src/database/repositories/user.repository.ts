@@ -14,21 +14,21 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({ 
+    return this.userRepository.findOne({
       where: { email },
       relations: ['profile'],
     });
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ 
+    return this.userRepository.findOne({
       where: { id },
       relations: ['profile'],
     });
   }
 
   async findUsersByRole(role: UserRole): Promise<User[]> {
-    return this.userRepository.find({ 
+    return this.userRepository.find({
       where: { role },
       relations: ['profile'],
     });

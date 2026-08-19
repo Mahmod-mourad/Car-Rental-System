@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 
-import { Notification, NotificationType } from '../database/entities/notification.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../database/entities/notification.entity';
 
 export interface CreateNotificationInput {
   userId: string;
@@ -24,8 +27,13 @@ export class NotificationsService {
    * belongs to the same unit of work as whatever caused it — a booking and its
    * "booking created" notice should either both land or neither.
    */
-  async create(input: CreateNotificationInput, manager?: EntityManager): Promise<Notification> {
-    const repository = manager ? manager.getRepository(Notification) : this.notificationsRepository;
+  async create(
+    input: CreateNotificationInput,
+    manager?: EntityManager,
+  ): Promise<Notification> {
+    const repository = manager
+      ? manager.getRepository(Notification)
+      : this.notificationsRepository;
 
     return repository.save(
       repository.create({
@@ -45,7 +53,9 @@ export class NotificationsService {
   ): Promise<{ data: Notification[]; total: number; unread: number }> {
     const { unreadOnly = false, page = 1, limit = 20 } = options;
 
-    const where = unreadOnly ? { user_id: userId, read: false } : { user_id: userId };
+    const where = unreadOnly
+      ? { user_id: userId, read: false }
+      : { user_id: userId };
 
     const [data, total] = await this.notificationsRepository.findAndCount({
       where,
@@ -86,7 +96,10 @@ export class NotificationsService {
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const result = await this.notificationsRepository.delete({ id, user_id: userId });
+    const result = await this.notificationsRepository.delete({
+      id,
+      user_id: userId,
+    });
 
     if (!result.affected) {
       throw new NotFoundException('Notification not found');

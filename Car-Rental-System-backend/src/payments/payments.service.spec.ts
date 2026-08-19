@@ -4,7 +4,11 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
 import { PaymentsService } from './payments.service';
 import { Payment } from '../database/entities/payment.entity';
-import { Booking, BookingStatus, BookingPaymentStatus } from '../database/entities/booking.entity';
+import {
+  Booking,
+  BookingStatus,
+  BookingPaymentStatus,
+} from '../database/entities/booking.entity';
 import { User, UserRole } from '../database/entities/user.entity';
 import { PaymentMethod } from './dto/create-payment.dto';
 import { PaymentStatus } from './dto/update-payment.dto';
@@ -63,9 +67,11 @@ describe('PaymentsService', () => {
           provide: getRepositoryToken(Booking),
           useValue: {
             findOne: jest.fn(async () => booking),
-            update: jest.fn(async (id: string, data: Record<string, unknown>) => {
-              bookingUpdates.push({ id, ...data });
-            }),
+            update: jest.fn(
+              async (id: string, data: Record<string, unknown>) => {
+                bookingUpdates.push({ id, ...data });
+              },
+            ),
           },
         },
         {
@@ -168,7 +174,11 @@ describe('PaymentsService', () => {
       // This was the hole: the booking's owner could PATCH the payment to
       // 'completed' and have the booking marked paid without paying.
       await expect(
-        service.update(PAYMENT_ID, { status: PaymentStatus.COMPLETED }, CUSTOMER_ID),
+        service.update(
+          PAYMENT_ID,
+          { status: PaymentStatus.COMPLETED },
+          CUSTOMER_ID,
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       expect(bookingUpdates).toHaveLength(0);
@@ -178,7 +188,11 @@ describe('PaymentsService', () => {
       actor = { id: ADMIN_ID, role: UserRole.ADMIN };
       completedSoFar = '750';
 
-      await service.update(PAYMENT_ID, { status: PaymentStatus.COMPLETED }, ADMIN_ID);
+      await service.update(
+        PAYMENT_ID,
+        { status: PaymentStatus.COMPLETED },
+        ADMIN_ID,
+      );
 
       expect(bookingUpdates[0]).toMatchObject({
         id: BOOKING_ID,
@@ -190,7 +204,11 @@ describe('PaymentsService', () => {
       actor = { id: ADMIN_ID, role: UserRole.ADMIN };
       completedSoFar = '0';
 
-      await service.update(PAYMENT_ID, { status: PaymentStatus.REFUNDED }, ADMIN_ID);
+      await service.update(
+        PAYMENT_ID,
+        { status: PaymentStatus.REFUNDED },
+        ADMIN_ID,
+      );
 
       expect(bookingUpdates[0]).toMatchObject({
         payment_status: BookingPaymentStatus.PENDING,

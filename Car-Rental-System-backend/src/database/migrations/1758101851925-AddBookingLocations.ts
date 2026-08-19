@@ -7,8 +7,18 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
  */
 export class AddBookingLocations1758101851925 implements MigrationInterface {
   private readonly columns = [
-    new TableColumn({ name: 'pickup_location', type: 'varchar', length: '200', isNullable: true }),
-    new TableColumn({ name: 'return_location', type: 'varchar', length: '200', isNullable: true }),
+    new TableColumn({
+      name: 'pickup_location',
+      type: 'varchar',
+      length: '200',
+      isNullable: true,
+    }),
+    new TableColumn({
+      name: 'return_location',
+      type: 'varchar',
+      length: '200',
+      isNullable: true,
+    }),
   ];
 
   public async up(queryRunner: QueryRunner): Promise<void> {

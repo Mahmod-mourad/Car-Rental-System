@@ -4,7 +4,9 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
  * A rental needs the driver's licence number on the booking. The form asked for
  * it and marked it required, then dropped it — there was no column.
  */
-export class AddBookingDriverLicense1758101851927 implements MigrationInterface {
+export class AddBookingDriverLicense1758101851927
+  implements MigrationInterface
+{
   private readonly column = new TableColumn({
     name: 'driver_license',
     type: 'varchar',

@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  OneToMany,
+} from 'typeorm';
 import { Profile } from './profile.entity';
 import { Vehicle } from './vehicle.entity';
 import { Booking } from './booking.entity';
@@ -42,8 +50,12 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   last_login: Date;
 
+  /**
+   * Profile is the owning side of this relation — the foreign key is
+   * profiles.user_id. This side carried a @JoinColumn() as well, which made
+   * TypeORM look for a users.profileId column that the schema has never had.
+   */
   @OneToOne(() => Profile, (profile) => profile.user, { cascade: true })
-  @JoinColumn()
   profile: Profile;
 
   @OneToMany(() => Vehicle, (vehicle) => vehicle.owner)

@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  UpdateDateColumn,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Review } from './review.entity';
 import { Point } from '../../common/types/postgis.types';
@@ -96,12 +105,22 @@ export class Vehicle {
   @Column('boolean', { default: false })
   is_featured: boolean;
 
-  @Column('geometry', {
-    type: 'point',
+  /**
+   * PostGIS point used by the radius search in VehiclesService.findAll.
+   *
+   * This was declared as `@Column('geometry', { type: 'point', ... })`, where the
+   * options object's `type` overrode the first argument — so TypeORM treated the
+   * column as Postgres's native `point` rather than a PostGIS geometry, and with
+   * synchronize on it quietly altered the column the migration had created.
+   * `spatialFeatureType` is how the geometry subtype is declared.
+   */
+  @Column({
+    type: 'geometry',
+    spatialFeatureType: 'Point',
     srid: 4326,
     nullable: true,
-  } as any) // Using any to bypass TypeORM type issues with PostGIS
-  location: any; // Using any for now to avoid TypeORM type issues with PostGIS
+  })
+  location: Point | null;
 
   @Column('text', { array: true, default: [] })
   images: string[];
@@ -110,10 +129,10 @@ export class Vehicle {
   @Column('jsonb', { nullable: true })
   features: string[] | null;
 
-  @Column('timestamp')
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  @Column('timestamp')
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 
   @ManyToOne(() => User, (user) => user.vehicles)

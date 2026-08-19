@@ -10,7 +10,8 @@ import { VehiclesModule } from '../vehicles/vehicles.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [NotificationsModule, 
+  imports: [
+    NotificationsModule,
     TypeOrmModule.forFeature([Booking, Vehicle, User]),
     VehiclesModule,
     UsersModule,

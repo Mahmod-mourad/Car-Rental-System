@@ -1,10 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import { BookingsService } from './bookings.service';
-import { Booking, BookingPaymentStatus, BookingStatus } from '../database/entities/booking.entity';
+import {
+  Booking,
+  BookingPaymentStatus,
+  BookingStatus,
+} from '../database/entities/booking.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../database/entities/notification.entity';
 import { Vehicle } from '../database/entities/vehicle.entity';
@@ -27,14 +35,21 @@ describe('BookingsService.create', () => {
   let conflictToReturn: Partial<Booking> | null;
   let vehicleToReturn: Partial<Vehicle> | null;
   let lockUsed: unknown;
-  let notificationsCreated: { input: Record<string, unknown>; manager: unknown }[];
+  let notificationsCreated: {
+    input: Record<string, unknown>;
+    manager: unknown;
+  }[];
 
   beforeEach(async () => {
     savedBooking = undefined;
     conflictToReturn = null;
     lockUsed = undefined;
     notificationsCreated = [];
-    vehicleToReturn = { id: VEHICLE_ID, price_per_day: 250, available: true } as Partial<Vehicle>;
+    vehicleToReturn = {
+      id: VEHICLE_ID,
+      price_per_day: 250,
+      available: true,
+    } as Partial<Vehicle>;
 
     const queryBuilder = {
       where: jest.fn().mockReturnThis(),
@@ -43,17 +58,22 @@ describe('BookingsService.create', () => {
     };
 
     const manager = {
-      findOne: jest.fn(async (_entity: unknown, options: { lock?: unknown }) => {
-        lockUsed = options.lock;
-        return vehicleToReturn;
-      }),
+      findOne: jest.fn(
+        async (_entity: unknown, options: { lock?: unknown }) => {
+          lockUsed = options.lock;
+          return vehicleToReturn;
+        },
+      ),
       createQueryBuilder: jest.fn(() => queryBuilder),
       create: jest.fn((_entity: unknown, data: Partial<Booking>) => data),
       save: jest.fn(async (_entity: unknown, data: Partial<Booking>) => {
         savedBooking = data;
         return { ...data, id: 'booking-1' };
       }),
-      findOneOrFail: jest.fn(async () => ({ ...savedBooking, id: 'booking-1' })),
+      findOneOrFail: jest.fn(async () => ({
+        ...savedBooking,
+        id: 'booking-1',
+      })),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,16 +88,23 @@ describe('BookingsService.create', () => {
         {
           provide: NotificationsService,
           useValue: {
-            create: jest.fn(async (input: Record<string, unknown>, passedManager: unknown) => {
-              notificationsCreated.push({ input, manager: passedManager });
-              return {};
-            }),
+            create: jest.fn(
+              async (
+                input: Record<string, unknown>,
+                passedManager: unknown,
+              ) => {
+                notificationsCreated.push({ input, manager: passedManager });
+                return {};
+              },
+            ),
           },
         },
         {
           provide: DataSource,
           useValue: {
-            transaction: jest.fn(async (work: (m: unknown) => Promise<unknown>) => work(manager)),
+            transaction: jest.fn(
+              async (work: (m: unknown) => Promise<unknown>) => work(manager),
+            ),
           },
         },
       ],
@@ -106,7 +133,11 @@ describe('BookingsService.create', () => {
 
     it('charges at least one day for a same-length rental', async () => {
       await service.create(
-        { vehicle_id: VEHICLE_ID, start_date: daysFromNow(2), end_date: daysFromNow(3) },
+        {
+          vehicle_id: VEHICLE_ID,
+          start_date: daysFromNow(2),
+          end_date: daysFromNow(3),
+        },
         USER_ID,
       );
 
@@ -115,7 +146,11 @@ describe('BookingsService.create', () => {
 
     it('starts a booking unpaid and pending', async () => {
       await service.create(
-        { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(2) },
+        {
+          vehicle_id: VEHICLE_ID,
+          start_date: daysFromNow(1),
+          end_date: daysFromNow(2),
+        },
         USER_ID,
       );
 
@@ -128,14 +163,22 @@ describe('BookingsService.create', () => {
     it('rejects an end date on or before the start date', async () => {
       await expect(
         service.create(
-          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(5), end_date: daysFromNow(5) },
+          {
+            vehicle_id: VEHICLE_ID,
+            start_date: daysFromNow(5),
+            end_date: daysFromNow(5),
+          },
           USER_ID,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       await expect(
         service.create(
-          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(5), end_date: daysFromNow(2) },
+          {
+            vehicle_id: VEHICLE_ID,
+            start_date: daysFromNow(5),
+            end_date: daysFromNow(2),
+          },
           USER_ID,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -144,7 +187,11 @@ describe('BookingsService.create', () => {
     it('rejects a start date in the past', async () => {
       await expect(
         service.create(
-          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(-1), end_date: daysFromNow(3) },
+          {
+            vehicle_id: VEHICLE_ID,
+            start_date: daysFromNow(-1),
+            end_date: daysFromNow(3),
+          },
           USER_ID,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -154,7 +201,11 @@ describe('BookingsService.create', () => {
   describe('availability', () => {
     it('locks the vehicle row before checking for conflicts', async () => {
       await service.create(
-        { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(2) },
+        {
+          vehicle_id: VEHICLE_ID,
+          start_date: daysFromNow(1),
+          end_date: daysFromNow(2),
+        },
         USER_ID,
       );
 
@@ -168,18 +219,30 @@ describe('BookingsService.create', () => {
 
       await expect(
         service.create(
-          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(4) },
+          {
+            vehicle_id: VEHICLE_ID,
+            start_date: daysFromNow(1),
+            end_date: daysFromNow(4),
+          },
           USER_ID,
         ),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('refuses a vehicle that is marked unavailable', async () => {
-      vehicleToReturn = { id: VEHICLE_ID, price_per_day: 250, available: false } as Partial<Vehicle>;
+      vehicleToReturn = {
+        id: VEHICLE_ID,
+        price_per_day: 250,
+        available: false,
+      } as Partial<Vehicle>;
 
       await expect(
         service.create(
-          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(2) },
+          {
+            vehicle_id: VEHICLE_ID,
+            start_date: daysFromNow(1),
+            end_date: daysFromNow(2),
+          },
           USER_ID,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -187,7 +250,11 @@ describe('BookingsService.create', () => {
 
     it('records a notification inside the booking transaction', async () => {
       await service.create(
-        { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(2) },
+        {
+          vehicle_id: VEHICLE_ID,
+          start_date: daysFromNow(1),
+          end_date: daysFromNow(2),
+        },
         USER_ID,
       );
 
@@ -206,7 +273,11 @@ describe('BookingsService.create', () => {
 
       await service
         .create(
-          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(4) },
+          {
+            vehicle_id: VEHICLE_ID,
+            start_date: daysFromNow(1),
+            end_date: daysFromNow(4),
+          },
           USER_ID,
         )
         .catch(() => null);
@@ -219,7 +290,11 @@ describe('BookingsService.create', () => {
 
       await expect(
         service.create(
-          { vehicle_id: VEHICLE_ID, start_date: daysFromNow(1), end_date: daysFromNow(2) },
+          {
+            vehicle_id: VEHICLE_ID,
+            start_date: daysFromNow(1),
+            end_date: daysFromNow(2),
+          },
           USER_ID,
         ),
       ).rejects.toBeInstanceOf(NotFoundException);

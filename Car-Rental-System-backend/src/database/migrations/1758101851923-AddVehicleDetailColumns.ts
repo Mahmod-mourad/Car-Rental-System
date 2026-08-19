@@ -8,12 +8,24 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
  * `location` already exists as a PostGIS point used for radius search. This adds
  * `location_name` next to it for the text a person actually reads.
  */
-export class AddVehicleDetailColumns1758101851923 implements MigrationInterface {
+export class AddVehicleDetailColumns1758101851923
+  implements MigrationInterface
+{
   private readonly columns = [
     new TableColumn({ name: 'description', type: 'text', isNullable: true }),
-    new TableColumn({ name: 'color', type: 'varchar', length: '50', isNullable: true }),
+    new TableColumn({
+      name: 'color',
+      type: 'varchar',
+      length: '50',
+      isNullable: true,
+    }),
     new TableColumn({ name: 'mileage', type: 'int', isNullable: true }),
-    new TableColumn({ name: 'location_name', type: 'varchar', length: '200', isNullable: true }),
+    new TableColumn({
+      name: 'location_name',
+      type: 'varchar',
+      length: '200',
+      isNullable: true,
+    }),
   ];
 
   public async up(queryRunner: QueryRunner): Promise<void> {

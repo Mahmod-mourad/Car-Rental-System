@@ -3,7 +3,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 
 import { NotificationsService } from './notifications.service';
-import { Notification, NotificationType } from '../database/entities/notification.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../database/entities/notification.entity';
 
 const USER_ID = '11111111-1111-1111-1111-111111111111';
 const OTHER_USER_ID = '22222222-2222-2222-2222-222222222222';
@@ -50,12 +53,20 @@ describe('NotificationsService', () => {
       body: 'Awaiting confirmation.',
     });
 
-    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ read: false }));
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ read: false }),
+    );
   });
 
   it('writes through the transaction manager when one is given', async () => {
-    const managerRepository = { ...repository, create: jest.fn((d) => d), save: jest.fn(async (d) => d) };
-    const manager = { getRepository: jest.fn(() => managerRepository) } as never;
+    const managerRepository = {
+      ...repository,
+      create: jest.fn((d) => d),
+      save: jest.fn(async (d) => d),
+    };
+    const manager = {
+      getRepository: jest.fn(() => managerRepository),
+    } as never;
 
     await service.create(
       {
@@ -73,7 +84,7 @@ describe('NotificationsService', () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
-  it('only ever reads one user\'s notifications', async () => {
+  it("only ever reads one user's notifications", async () => {
     await service.findForUser(USER_ID);
 
     expect(repository.findAndCount).toHaveBeenCalledWith(
@@ -90,7 +101,11 @@ describe('NotificationsService', () => {
   });
 
   it('scopes mark-as-read to the owner, not just the id', async () => {
-    repository.findOne.mockResolvedValueOnce({ id: NOTIFICATION_ID, user_id: USER_ID, read: false });
+    repository.findOne.mockResolvedValueOnce({
+      id: NOTIFICATION_ID,
+      user_id: USER_ID,
+      read: false,
+    });
 
     await service.markAsRead(NOTIFICATION_ID, USER_ID);
 
@@ -101,15 +116,15 @@ describe('NotificationsService', () => {
     });
   });
 
-  it('refuses to mark another user\'s notification as read', async () => {
+  it("refuses to mark another user's notification as read", async () => {
     repository.findOne.mockResolvedValueOnce(null);
 
-    await expect(service.markAsRead(NOTIFICATION_ID, OTHER_USER_ID)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.markAsRead(NOTIFICATION_ID, OTHER_USER_ID),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('marks only the caller\'s unread notifications', async () => {
+  it("marks only the caller's unread notifications", async () => {
     const result = await service.markAllAsRead(USER_ID);
 
     expect(repository.update).toHaveBeenCalledWith(
@@ -122,8 +137,8 @@ describe('NotificationsService', () => {
   it('refuses to delete a notification belonging to someone else', async () => {
     repository.delete.mockResolvedValueOnce({ affected: 0 });
 
-    await expect(service.remove(NOTIFICATION_ID, OTHER_USER_ID)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.remove(NOTIFICATION_ID, OTHER_USER_ID),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

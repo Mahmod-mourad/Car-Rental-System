@@ -5,7 +5,9 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
  * conditioning. Neither existed on the table, so the page read them off a
  * hardcoded object.
  */
-export class AddVehicleDoorsAndAircon1758101851926 implements MigrationInterface {
+export class AddVehicleDoorsAndAircon1758101851926
+  implements MigrationInterface
+{
   private readonly columns = [
     new TableColumn({ name: 'doors', type: 'int', isNullable: true }),
     new TableColumn({

@@ -18,13 +18,20 @@ export class ReviewDto {
   @ApiProperty({ description: 'Optional review comment', required: false })
   comment?: string;
 
-  @ApiProperty({ description: 'Optional response from the vehicle owner', type: ReviewResponseDto, required: false })
+  @ApiProperty({
+    description: 'Optional response from the vehicle owner',
+    type: ReviewResponseDto,
+    required: false,
+  })
   response?: ReviewResponseDto;
 
   @ApiProperty({ description: 'When the review was created' })
   created_at: Date;
 
-  @ApiProperty({ description: 'When the review was last updated', required: false })
+  @ApiProperty({
+    description: 'When the review was last updated',
+    required: false,
+  })
   updated_at?: Date;
 
   @ApiProperty({ description: 'ID of the user who created the review' })

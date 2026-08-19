@@ -6,8 +6,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, Not } from 'typeorm';
-import { Booking, BookingStatus, BookingPaymentStatus } from '../database/entities/booking.entity';
+import { DataSource, Repository } from 'typeorm';
+import {
+  Booking,
+  BookingStatus,
+  BookingPaymentStatus,
+} from '../database/entities/booking.entity';
 import { Vehicle } from '../database/entities/vehicle.entity';
 import { User } from '../database/entities/user.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -42,11 +46,16 @@ export class BookingsService {
   /** Whole days between the pickup day and the return day, minimum one. */
   private rentalDays(startDate: Date, endDate: Date): number {
     const msPerDay = 24 * 60 * 60 * 1000;
-    const days = Math.round((endDate.getTime() - startDate.getTime()) / msPerDay);
+    const days = Math.round(
+      (endDate.getTime() - startDate.getTime()) / msPerDay,
+    );
     return Math.max(days, 1);
   }
 
-  async create(createBookingDto: CreateBookingDto, userId: string): Promise<Booking> {
+  async create(
+    createBookingDto: CreateBookingDto,
+    userId: string,
+  ): Promise<Booking> {
     const {
       vehicle_id,
       start_date,
@@ -61,7 +70,9 @@ export class BookingsService {
     const endDate = new Date(end_date);
 
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      throw new BadRequestException('start_date and end_date must be valid dates');
+      throw new BadRequestException(
+        'start_date and end_date must be valid dates',
+      );
     }
 
     if (endDate <= startDate) {
@@ -100,17 +111,24 @@ export class BookingsService {
       const conflict = await manager
         .createQueryBuilder(Booking, 'booking')
         .where('booking.vehicle_id = :vehicleId', { vehicleId: vehicle_id })
-        .andWhere('booking.status != :cancelled', { cancelled: BookingStatus.CANCELLED })
+        .andWhere('booking.status != :cancelled', {
+          cancelled: BookingStatus.CANCELLED,
+        })
         // Two ranges overlap when each one starts before the other ends. Treating the
         // return day as occupied means a same-day handover counts as a conflict.
-        .andWhere('booking.start_date <= :endDate AND booking.end_date >= :startDate', {
-          startDate,
-          endDate,
-        })
+        .andWhere(
+          'booking.start_date <= :endDate AND booking.end_date >= :startDate',
+          {
+            startDate,
+            endDate,
+          },
+        )
         .getOne();
 
       if (conflict) {
-        throw new ConflictException('The vehicle is already booked for the selected dates');
+        throw new ConflictException(
+          'The vehicle is already booked for the selected dates',
+        );
       }
 
       // The client does not get to name its own price. The total is derived from the
@@ -156,7 +174,9 @@ export class BookingsService {
     });
   }
 
-  async findAll(filters: BookingSearchOptions = {}): Promise<{ data: Booking[]; count: number }> {
+  async findAll(
+    filters: BookingSearchOptions = {},
+  ): Promise<{ data: Booking[]; count: number }> {
     const {
       userId,
       vehicleId,
@@ -178,12 +198,12 @@ export class BookingsService {
     const params: Record<string, any> = {};
 
     if (userId) {
-      whereConditions.push('booking.userId = :userId');
+      whereConditions.push('booking.user_id = :userId');
       params.userId = userId;
     }
 
     if (vehicleId) {
-      whereConditions.push('booking.vehicleId = :vehicleId');
+      whereConditions.push('booking.vehicle_id = :vehicleId');
       params.vehicleId = vehicleId;
     }
 
@@ -240,35 +260,47 @@ export class BookingsService {
     isAdmin = false,
   ): Promise<Booking> {
     const booking = await this.findOne(id);
-    
+
     // Check if the user is the owner of the booking or an admin
     if (booking.user.id !== userId && !isAdmin) {
-      throw new ForbiddenException('You are not authorized to update this booking');
+      throw new ForbiddenException(
+        'You are not authorized to update this booking',
+      );
     }
 
     // If updating dates, check for conflicts
     if (updateBookingDto.start_date || updateBookingDto.end_date) {
-      const startDate = updateBookingDto.start_date ? new Date(updateBookingDto.start_date) : booking.start_date;
-      const endDate = updateBookingDto.end_date ? new Date(updateBookingDto.end_date) : booking.end_date;
+      const startDate = updateBookingDto.start_date
+        ? new Date(updateBookingDto.start_date)
+        : booking.start_date;
+      const endDate = updateBookingDto.end_date
+        ? new Date(updateBookingDto.end_date)
+        : booking.end_date;
 
       const conflictingBooking = await this.bookingsRepository
         .createQueryBuilder('booking')
         .where('booking.id != :id', { id })
-        .andWhere('booking.vehicle_id = :vehicleId', { vehicleId: booking.vehicle.id })
-        .andWhere('booking.status != :cancelled', { cancelled: BookingStatus.CANCELLED })
+        .andWhere('booking.vehicle_id = :vehicleId', {
+          vehicleId: booking.vehicle.id,
+        })
+        .andWhere('booking.status != :cancelled', {
+          cancelled: BookingStatus.CANCELLED,
+        })
         .andWhere(
           '(:startDate BETWEEN booking.start_date AND booking.end_date) OR ' +
-          '(:endDate BETWEEN booking.start_date AND booking.end_date) OR ' +
-          '(booking.start_date <= :startDate AND booking.end_date >= :endDate)'
+            '(:endDate BETWEEN booking.start_date AND booking.end_date) OR ' +
+            '(booking.start_date <= :startDate AND booking.end_date >= :endDate)',
         )
         .setParameters({
           startDate,
-          endDate
+          endDate,
         })
         .getOne();
 
       if (conflictingBooking) {
-        throw new BadRequestException('The vehicle is already booked for the selected dates');
+        throw new BadRequestException(
+          'The vehicle is already booked for the selected dates',
+        );
       }
     }
 
@@ -279,10 +311,12 @@ export class BookingsService {
 
   async cancel(id: string, userId: string, isAdmin = false): Promise<Booking> {
     const booking = await this.findOne(id);
-    
+
     // Check if the user is the owner of the booking or an admin
     if (booking.user.id !== userId && !isAdmin) {
-      throw new ForbiddenException('You are not authorized to cancel this booking');
+      throw new ForbiddenException(
+        'You are not authorized to cancel this booking',
+      );
     }
 
     // Check if the booking can be cancelled
@@ -322,18 +356,23 @@ export class BookingsService {
     isAdmin = false,
   ): Promise<Booking> {
     const booking = await this.findOne(id);
-    
+
     // Only admin or the vehicle owner can update the status
     if (booking.vehicle.owner.id !== userId && !isAdmin) {
-      throw new ForbiddenException('You are not authorized to update the status of this booking');
+      throw new ForbiddenException(
+        'You are not authorized to update the status of this booking',
+      );
     }
 
     // Validate status transition
     if (
-      (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.COMPLETED) &&
+      (booking.status === BookingStatus.CANCELLED ||
+        booking.status === BookingStatus.COMPLETED) &&
       status !== booking.status
     ) {
-      throw new BadRequestException(`Cannot change status from ${booking.status} to ${status}`);
+      throw new BadRequestException(
+        `Cannot change status from ${booking.status} to ${status}`,
+      );
     }
 
     booking.status = status;

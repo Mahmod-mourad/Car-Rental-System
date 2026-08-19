@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 import {
   Controller,
   Get,
@@ -16,12 +17,18 @@ import {
 import { VehiclesService, SearchFilters } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { UserRole } from '../database/entities/user.entity';
 import { Vehicle } from '../database/entities/vehicle.entity';
-import { Min, Max } from 'class-validator';
 
 @ApiTags('Vehicles')
 @Controller('vehicles')
@@ -33,23 +40,31 @@ export class VehiclesController {
   @Post()
   @Roles(UserRole.AGENT, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new vehicle (Agents and Admins only)' })
-  @ApiResponse({ status: 201, description: 'Vehicle successfully created', type: Vehicle })
-  create(@Body() createVehicleDto: CreateVehicleDto, @Req() req) {
+  @ApiResponse({
+    status: 201,
+    description: 'Vehicle successfully created',
+    type: Vehicle,
+  })
+  create(
+    @Body() createVehicleDto: CreateVehicleDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.vehiclesService.create(createVehicleDto, req.user.userId);
   }
 
   @Get()
-  @ApiOperation({ 
+  @Public()
+  @ApiOperation({
     summary: 'Get all vehicles with optional filters',
     description: `Search and filter vehicles based on various criteria. 
       - Filter by make, model, year, type, and price range
       - Search by location (latitude/longitude)
       - Filter by availability and featured status
-      - Pagination support`
+      - Pagination support`,
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Successfully retrieved list of vehicles', 
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved list of vehicles',
     type: [Vehicle],
   })
   @ApiResponse({
@@ -60,100 +75,111 @@ export class VehiclesController {
     status: 500,
     description: 'Internal server error',
   })
-  @ApiQuery({ name: 'make', required: false, description: 'Filter by vehicle make (e.g., Toyota, Honda)' })
-  @ApiQuery({ name: 'model', required: false, description: 'Filter by vehicle model (e.g., Camry, Civic)' })
-  @ApiQuery({ 
-    name: 'minYear', 
-    required: false, 
-    type: Number, 
-    description: 'Filter by minimum manufacturing year' 
+  @ApiQuery({
+    name: 'make',
+    required: false,
+    description: 'Filter by vehicle make (e.g., Toyota, Honda)',
   })
-  @ApiQuery({ 
-    name: 'maxYear', 
-    required: false, 
-    type: Number, 
-    description: 'Filter by maximum manufacturing year' 
+  @ApiQuery({
+    name: 'model',
+    required: false,
+    description: 'Filter by vehicle model (e.g., Camry, Civic)',
   })
-  @ApiQuery({ 
-    name: 'type', 
-    required: false, 
-    description: 'Filter by vehicle type (e.g., SEDAN, SUV, TRUCK)' 
+  @ApiQuery({
+    name: 'minYear',
+    required: false,
+    type: Number,
+    description: 'Filter by minimum manufacturing year',
   })
-  @ApiQuery({ 
-    name: 'minPrice', 
-    required: false, 
-    type: Number, 
-    description: 'Filter by minimum daily rental price' 
+  @ApiQuery({
+    name: 'maxYear',
+    required: false,
+    type: Number,
+    description: 'Filter by maximum manufacturing year',
   })
-  @ApiQuery({ 
-    name: 'maxPrice', 
-    required: false, 
-    type: Number, 
-    description: 'Filter by maximum daily rental price' 
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Filter by vehicle type (e.g., SEDAN, SUV, TRUCK)',
   })
-  @ApiQuery({ 
-    name: 'minRating', 
-    required: false, 
-    type: Number, 
-    description: 'Filter by minimum average rating (1-5)' 
+  @ApiQuery({
+    name: 'minPrice',
+    required: false,
+    type: Number,
+    description: 'Filter by minimum daily rental price',
   })
-  @ApiQuery({ 
-    name: 'isFeatured', 
-    required: false, 
-    type: 'boolean', 
-    description: 'Filter only featured vehicles' 
+  @ApiQuery({
+    name: 'maxPrice',
+    required: false,
+    type: Number,
+    description: 'Filter by maximum daily rental price',
   })
-  @ApiQuery({ 
-    name: 'available', 
-    required: false, 
-    type: 'boolean', 
-    description: 'Filter only currently available vehicles' 
+  @ApiQuery({
+    name: 'minRating',
+    required: false,
+    type: Number,
+    description: 'Filter by minimum average rating (1-5)',
   })
-  @ApiQuery({ 
-    name: 'lat', 
-    required: false, 
-    type: Number, 
-    description: 'Latitude for location-based search' 
+  @ApiQuery({
+    name: 'isFeatured',
+    required: false,
+    type: 'boolean',
+    description: 'Filter only featured vehicles',
   })
-  @ApiQuery({ 
-    name: 'lng', 
-    required: false, 
-    type: Number, 
-    description: 'Longitude for location-based search' 
+  @ApiQuery({
+    name: 'available',
+    required: false,
+    type: 'boolean',
+    description: 'Filter only currently available vehicles',
   })
-  @ApiQuery({ 
-    name: 'radiusKm', 
-    required: false, 
-    type: Number, 
-    description: 'Search radius in kilometers (default: 50km)' 
+  @ApiQuery({
+    name: 'lat',
+    required: false,
+    type: Number,
+    description: 'Latitude for location-based search',
   })
-  @ApiQuery({ 
-    name: 'page', 
-    required: false, 
-    type: Number, 
-    description: 'Page number for pagination (default: 1)' 
+  @ApiQuery({
+    name: 'lng',
+    required: false,
+    type: Number,
+    description: 'Longitude for location-based search',
   })
-  @ApiQuery({ 
-    name: 'limit', 
-    required: false, 
-    type: Number, 
-    description: 'Number of items per page (default: 10, max: 100)' 
+  @ApiQuery({
+    name: 'radiusKm',
+    required: false,
+    type: Number,
+    description: 'Search radius in kilometers (default: 50km)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number for pagination (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of items per page (default: 10, max: 100)',
   })
   async findAll(
     @Query('make') make?: string,
     @Query('model') model?: string,
     @Query('minYear', new DefaultValuePipe(0), ParseIntPipe) minYear?: number,
-    @Query('maxYear', new DefaultValuePipe(3000), ParseIntPipe) maxYear?: number,
+    @Query('maxYear', new DefaultValuePipe(3000), ParseIntPipe)
+    maxYear?: number,
     @Query('type') type?: string,
     @Query('minPrice', new DefaultValuePipe(0), ParseIntPipe) minPrice?: number,
-    @Query('maxPrice', new DefaultValuePipe(1000000), ParseIntPipe) maxPrice?: number,
+    @Query('maxPrice', new DefaultValuePipe(1000000), ParseIntPipe)
+    maxPrice?: number,
     @Query('minRating')
     minRating?: number,
     @Query('isFeatured') isFeatured?: string,
     @Query('available') available?: boolean,
     @Query('lat') lat?: number,
     @Query('lng') lng?: number,
-    @Query('radiusKm', new DefaultValuePipe(50), ParseIntPipe) radiusKm?: number,
+    @Query('radiusKm', new DefaultValuePipe(50), ParseIntPipe)
+    radiusKm?: number,
     @Query('transmission') transmission?: string,
     @Query('fuelType') fuelType?: string,
     @Query('minSeats') minSeats?: string,
@@ -171,7 +197,9 @@ export class VehiclesController {
       type,
       minPrice,
       maxPrice,
-      minRating: minRating ? Math.min(5, Math.max(1, Number(minRating))) : undefined,
+      minRating: minRating
+        ? Math.min(5, Math.max(1, Number(minRating)))
+        : undefined,
       isFeatured: isFeatured ? isFeatured.toLowerCase() === 'true' : undefined,
       available,
       transmission,
@@ -180,7 +208,9 @@ export class VehiclesController {
       search,
       // Anything outside the four sortable columns falls back to the default rather
       // than reaching the query builder.
-      sortBy: (['price', 'rating', 'year', 'name'] as const).includes(sortBy as never)
+      sortBy: (['price', 'rating', 'year', 'name'] as const).includes(
+        sortBy as never,
+      )
         ? (sortBy as SearchFilters['sortBy'])
         : undefined,
       sortOrder: sortOrder === 'desc' ? 'desc' : 'asc',
@@ -200,27 +230,32 @@ export class VehiclesController {
   }
 
   @Get('featured')
-  @ApiOperation({ 
+  @Public()
+  @ApiOperation({
     summary: 'Get featured vehicles',
-    description: 'Returns a list of featured vehicles, sorted by highest rating and most recent. Featured vehicles are typically highlighted for better visibility.'
+    description:
+      'Returns a list of featured vehicles, sorted by highest rating and most recent. Featured vehicles are typically highlighted for better visibility.',
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Successfully retrieved list of featured vehicles', 
-    type: [Vehicle] 
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully retrieved list of featured vehicles',
+    type: [Vehicle],
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - invalid limit parameter'
+    description: 'Bad request - invalid limit parameter',
   })
-  @ApiQuery({ 
-    name: 'limit', 
-    required: false, 
-    type: Number, 
-    description: 'Maximum number of featured vehicles to return (default: 6, max: 20)',
-    example: 6
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description:
+      'Maximum number of featured vehicles to return (default: 6, max: 20)',
+    example: 6,
   })
-  async getFeaturedVehicles(@Query('limit', new DefaultValuePipe(6), ParseIntPipe) limit: number) {
+  async getFeaturedVehicles(
+    @Query('limit', new DefaultValuePipe(6), ParseIntPipe) limit: number,
+  ) {
     if (limit < 1 || limit > 20) {
       throw new BadRequestException('Limit must be between 1 and 20');
     }
@@ -228,10 +263,22 @@ export class VehiclesController {
   }
 
   @Get('latest')
+  @Public()
   @ApiOperation({ summary: 'Get latest vehicles' })
-  @ApiResponse({ status: 200, description: 'Return list of latest vehicles', type: [Vehicle] })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of vehicles to return (default: 6)' })
-  async getLatestVehicles(@Query('limit', new DefaultValuePipe(6), ParseIntPipe) limit: number) {
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of latest vehicles',
+    type: [Vehicle],
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of vehicles to return (default: 6)',
+  })
+  async getLatestVehicles(
+    @Query('limit', new DefaultValuePipe(6), ParseIntPipe) limit: number,
+  ) {
     if (limit < 1 || limit > 20) {
       throw new BadRequestException('Limit must be between 1 and 20');
     }
@@ -239,12 +286,22 @@ export class VehiclesController {
   }
 
   @Get('similar/:id')
+  @Public()
   @ApiOperation({ summary: 'Get similar vehicles' })
-  @ApiResponse({ status: 200, description: 'Return list of similar vehicles', type: [Vehicle] })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of vehicles to return (default: 4)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of similar vehicles',
+    type: [Vehicle],
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of vehicles to return (default: 4)',
+  })
   async getSimilarVehicles(
     @Param('id') id: string,
-    @Query('limit', new DefaultValuePipe(4), ParseIntPipe) limit: number
+    @Query('limit', new DefaultValuePipe(4), ParseIntPipe) limit: number,
   ) {
     if (limit < 1 || limit > 10) {
       throw new BadRequestException('Limit must be between 1 and 10');
@@ -253,10 +310,21 @@ export class VehiclesController {
   }
 
   @Get('brands/popular')
+  @Public()
   @ApiOperation({ summary: 'Get popular car brands' })
-  @ApiResponse({ status: 200, description: 'Return list of popular car brands with vehicle counts' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of brands to return (default: 5)' })
-  async getPopularBrands(@Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number) {
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of popular car brands with vehicle counts',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of brands to return (default: 5)',
+  })
+  async getPopularBrands(
+    @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+  ) {
     if (limit < 1 || limit > 20) {
       throw new BadRequestException('Limit must be between 1 and 20');
     }
@@ -264,23 +332,39 @@ export class VehiclesController {
   }
 
   @Get('price-range')
+  @Public()
   @ApiOperation({ summary: 'Get price range of available vehicles' })
-  @ApiResponse({ status: 200, description: 'Return min and max price of available vehicles' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return min and max price of available vehicles',
+  })
   async getPriceRange() {
     return this.vehiclesService.getPriceRange();
   }
 
   @Get('my-vehicles')
   @Roles(UserRole.AGENT, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all vehicles owned by the current user (Agents and Admins only)' })
-  @ApiResponse({ status: 200, description: 'Return list of vehicles', type: [Vehicle] })
-  findUserVehicles(@Req() req) {
+  @ApiOperation({
+    summary:
+      'Get all vehicles owned by the current user (Agents and Admins only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of vehicles',
+    type: [Vehicle],
+  })
+  findUserVehicles(@Req() req: AuthenticatedRequest) {
     return this.vehiclesService.findUserVehicles(req.user.userId);
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Get a vehicle by ID' })
-  @ApiResponse({ status: 200, description: 'Return the vehicle', type: Vehicle })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the vehicle',
+    type: Vehicle,
+  })
   @ApiResponse({ status: 404, description: 'Vehicle not found' })
   findOne(@Param('id') id: string) {
     return this.vehiclesService.findOne(id);
@@ -288,13 +372,17 @@ export class VehiclesController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a vehicle' })
-  @ApiResponse({ status: 200, description: 'Vehicle updated successfully', type: Vehicle })
+  @ApiResponse({
+    status: 200,
+    description: 'Vehicle updated successfully',
+    type: Vehicle,
+  })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Vehicle not found' })
   update(
     @Param('id') id: string,
     @Body() updateVehicleDto: UpdateVehicleDto,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.vehiclesService.update(id, updateVehicleDto, req.user.userId);
   }
@@ -305,21 +393,31 @@ export class VehiclesController {
   @ApiResponse({ status: 200, description: 'Vehicle deleted successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Vehicle not found' })
-  remove(@Param('id') id: string, @Req() req) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.vehiclesService.remove(id, req.user.userId);
   }
 
   @Patch(':id/availability')
   @Roles(UserRole.AGENT, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update vehicle availability (Agents and Admins only)' })
-  @ApiResponse({ status: 200, description: 'Vehicle availability updated', type: Vehicle })
+  @ApiOperation({
+    summary: 'Update vehicle availability (Agents and Admins only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Vehicle availability updated',
+    type: Vehicle,
+  })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Vehicle not found' })
   updateAvailability(
     @Param('id') id: string,
     @Body('available') available: boolean,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.vehiclesService.updateAvailability(id, available, req.user.userId);
+    return this.vehiclesService.updateAvailability(
+      id,
+      available,
+      req.user.userId,
+    );
   }
 }

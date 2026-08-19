@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
+import {
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToOne,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Vehicle } from './vehicle.entity';
 import { Booking } from './booking.entity';
@@ -20,7 +28,7 @@ export class Review {
     responded_at: Date;
   };
 
-  @Column('timestamp')
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
   @Column('timestamp', { nullable: true })

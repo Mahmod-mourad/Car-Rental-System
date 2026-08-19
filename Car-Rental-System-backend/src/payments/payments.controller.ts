@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 import {
   Controller,
   Get,
@@ -18,7 +19,13 @@ import { PaymentMethod } from './dto/create-payment.dto';
 import { PaymentStatus } from './dto/update-payment.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../database/entities/user.entity';
@@ -33,15 +40,26 @@ export class PaymentsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new payment' })
-  @ApiResponse({ status: 201, description: 'Payment successfully created', type: Payment })
-  create(@Body() createPaymentDto: CreatePaymentDto, @Req() req) {
+  @ApiResponse({
+    status: 201,
+    description: 'Payment successfully created',
+    type: Payment,
+  })
+  create(
+    @Body() createPaymentDto: CreatePaymentDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.paymentsService.create(createPaymentDto, req.user.userId);
   }
 
   @Get()
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all payments (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Return list of payments', type: [Payment] })
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of payments',
+    type: [Payment],
+  })
   @ApiQuery({ name: 'status', required: false, enum: PaymentStatus })
   @ApiQuery({ name: 'method', required: false, enum: PaymentMethod })
   @ApiQuery({ name: 'startDate', required: false })
@@ -76,13 +94,17 @@ export class PaymentsController {
   }
 
   @Get('my-payments')
-  @ApiOperation({ summary: 'Get current user\'s payments' })
-  @ApiResponse({ status: 200, description: 'Return list of user payments', type: [Payment] })
+  @ApiOperation({ summary: "Get current user's payments" })
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of user payments',
+    type: [Payment],
+  })
   @ApiQuery({ name: 'status', required: false, enum: PaymentStatus })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   findUserPayments(
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
     @Query('status') status?: PaymentStatus,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit = 10,
@@ -97,15 +119,29 @@ export class PaymentsController {
 
   @Get('booking/:bookingId')
   @ApiOperation({ summary: 'Get payments for a specific booking' })
-  @ApiResponse({ status: 200, description: 'Return list of booking payments', type: [Payment] })
-  getBookingPayments(@Param('bookingId') bookingId: string, @Req() req) {
+  @ApiResponse({
+    status: 200,
+    description: 'Return list of booking payments',
+    type: [Payment],
+  })
+  getBookingPayments(
+    @Param('bookingId') bookingId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.paymentsService.getBookingPayments(bookingId, req.user.userId);
   }
 
   @Get('booking/:bookingId/total-paid')
   @ApiOperation({ summary: 'Get total amount paid for a booking' })
-  @ApiResponse({ status: 200, description: 'Return total amount paid', type: Number })
-  async getTotalPaid(@Param('bookingId') bookingId: string, @Req() req) {
+  @ApiResponse({
+    status: 200,
+    description: 'Return total amount paid',
+    type: Number,
+  })
+  async getTotalPaid(
+    @Param('bookingId') bookingId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     // Verify the user has access to this booking
     await this.paymentsService.getBookingPayments(bookingId, req.user.userId);
     return this.paymentsService.getTotalPaid(bookingId);
@@ -113,22 +149,30 @@ export class PaymentsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a payment by ID' })
-  @ApiResponse({ status: 200, description: 'Return the payment', type: Payment })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the payment',
+    type: Payment,
+  })
   @ApiResponse({ status: 404, description: 'Payment not found' })
-  findOne(@Param('id') id: string, @Req() req) {
+  findOne(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.paymentsService.findOne(id, req.user.userId);
   }
 
   @Patch(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a payment (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Payment updated successfully', type: Payment })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment updated successfully',
+    type: Payment,
+  })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
   update(
     @Param('id') id: string,
     @Body() updatePaymentDto: UpdatePaymentDto,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.paymentsService.update(id, updatePaymentDto, req.user.userId);
   }
@@ -139,14 +183,18 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment deleted successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
-  remove(@Param('id') id: string, @Req() req) {
+  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.paymentsService.remove(id, req.user.userId);
   }
 
   @Post(':id/refund')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Process a refund (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Refund processed successfully', type: Payment })
+  @ApiResponse({
+    status: 201,
+    description: 'Refund processed successfully',
+    type: Payment,
+  })
   @ApiResponse({ status: 400, description: 'Invalid refund request' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
@@ -154,7 +202,7 @@ export class PaymentsController {
     @Param('id') id: string,
     @Body('amount') amount: number,
     @Body('reason') reason: string,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
     if (!amount || amount <= 0) {
       throw new BadRequestException('A valid refund amount is required');
@@ -163,6 +211,11 @@ export class PaymentsController {
       throw new BadRequestException('A reason for the refund is required');
     }
 
-    return this.paymentsService.processRefund(id, amount, reason, req.user.userId);
+    return this.paymentsService.processRefund(
+      id,
+      amount,
+      reason,
+      req.user.userId,
+    );
   }
 }

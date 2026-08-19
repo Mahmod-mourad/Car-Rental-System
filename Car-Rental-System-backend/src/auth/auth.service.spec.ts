@@ -24,7 +24,9 @@ describe('AuthService', () => {
     updates = [];
 
     const manager = {
-      create: jest.fn((_entity: unknown, data?: Record<string, unknown>) => data ?? {}),
+      create: jest.fn(
+        (_entity: unknown, data?: Record<string, unknown>) => data ?? {},
+      ),
       save: jest.fn(async (data: Record<string, unknown>) => {
         saved.push(data);
         return { id: USER_ID, ...data };
@@ -34,20 +36,27 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: JwtService, useValue: { sign: jest.fn(() => 'signed.jwt.token') } },
+        {
+          provide: JwtService,
+          useValue: { sign: jest.fn(() => 'signed.jwt.token') },
+        },
         {
           provide: DataSource,
           useValue: {
-            transaction: jest.fn(async (work: (m: unknown) => Promise<unknown>) => work(manager)),
+            transaction: jest.fn(
+              async (work: (m: unknown) => Promise<unknown>) => work(manager),
+            ),
           },
         },
         {
           provide: getRepositoryToken(User),
           useValue: {
             findOne: jest.fn(async () => existingUser),
-            update: jest.fn(async (id: string, data: Record<string, unknown>) => {
-              updates.push({ id, ...data });
-            }),
+            update: jest.fn(
+              async (id: string, data: Record<string, unknown>) => {
+                updates.push({ id, ...data });
+              },
+            ),
           },
         },
         { provide: getRepositoryToken(Profile), useValue: {} },
@@ -64,7 +73,9 @@ describe('AuthService', () => {
       const userRow = saved[0] as { password_hash: string };
       expect(userRow.password_hash).not.toBe(PASSWORD);
       expect(userRow.password_hash).toMatch(/^\$2[aby]\$\d{2}\$/);
-      await expect(bcrypt.compare(PASSWORD, userRow.password_hash)).resolves.toBe(true);
+      await expect(
+        bcrypt.compare(PASSWORD, userRow.password_hash),
+      ).resolves.toBe(true);
     });
 
     it('always creates a customer, whatever the caller asks for', async () => {
@@ -80,7 +91,10 @@ describe('AuthService', () => {
     });
 
     it('normalises the email so Nour@Example.com and nour@example.com are one account', async () => {
-      await service.register({ email: '  Nour@Example.COM  ', password: PASSWORD });
+      await service.register({
+        email: '  Nour@Example.COM  ',
+        password: PASSWORD,
+      });
 
       expect((saved[0] as { email: string }).email).toBe('nour@example.com');
     });
@@ -94,7 +108,11 @@ describe('AuthService', () => {
       });
 
       expect(saved).toHaveLength(2);
-      expect(saved[1]).toMatchObject({ first_name: 'Nour', last_name: 'Hassan', user_id: USER_ID });
+      expect(saved[1]).toMatchObject({
+        first_name: 'Nour',
+        last_name: 'Hassan',
+        user_id: USER_ID,
+      });
     });
 
     it('refuses an email that is already registered', async () => {
@@ -118,7 +136,10 @@ describe('AuthService', () => {
     });
 
     it('returns a token carrying the real user id', async () => {
-      const result = await service.login({ email: 'nour@example.com', password: PASSWORD });
+      const result = await service.login({
+        email: 'nour@example.com',
+        password: PASSWORD,
+      });
 
       // The old implementation signed sub: 'mock-user-id', which is not a UUID and
       // blew up every query that used it as a foreign key.
@@ -164,7 +185,9 @@ describe('AuthService', () => {
     it('spends time hashing even when the account does not exist', async () => {
       existingUser = null;
       const start = Date.now();
-      await service.login({ email: 'nobody@example.com', password: PASSWORD }).catch(() => null);
+      await service
+        .login({ email: 'nobody@example.com', password: PASSWORD })
+        .catch(() => null);
 
       // A bare early return would come back in well under a millisecond and make
       // registered emails identifiable by response time alone.

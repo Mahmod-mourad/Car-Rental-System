@@ -1,4 +1,12 @@
-import { DeepPartial, FindManyOptions, FindOneOptions, FindOptionsWhere, ObjectLiteral, Repository, UpdateResult } from 'typeorm';
+import {
+  DeepPartial,
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsWhere,
+  ObjectLiteral,
+  Repository,
+  UpdateResult,
+} from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 export abstract class BaseRepository<T extends ObjectLiteral> {
@@ -12,7 +20,9 @@ export abstract class BaseRepository<T extends ObjectLiteral> {
     return this.repository.findOne(options);
   }
 
-  async findOneBy(where: FindOptionsWhere<T> | FindOptionsWhere<T>[]): Promise<T | null> {
+  async findOneBy(
+    where: FindOptionsWhere<T> | FindOptionsWhere<T>[],
+  ): Promise<T | null> {
     return this.repository.findOneBy(where as any);
   }
 

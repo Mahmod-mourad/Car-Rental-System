@@ -1,3 +1,4 @@
+import type { AuthenticatedRequest } from '../common/types/authenticated-request';
 import {
   Body,
   Controller,
@@ -28,7 +29,10 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an account and sign in' })
-  @ApiResponse({ status: 201, description: 'Account created; returns an access token' })
+  @ApiResponse({
+    status: 201,
+    description: 'Account created; returns an access token',
+  })
   @ApiResponse({ status: 409, description: 'Email already registered' })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -47,7 +51,7 @@ export class AuthController {
   @Get('profile')
   @ApiOperation({ summary: 'Get the signed-in user and their profile' })
   @ApiResponse({ status: 200, description: 'The current user' })
-  async profile(@Req() req: any) {
+  async profile(@Req() req: AuthenticatedRequest) {
     // JwtStrategy attaches { userId, email, role }; the id is the only part trusted
     // here, since the rest of the token could be stale.
     return this.authService.getProfile(req.user.userId);
@@ -56,7 +60,10 @@ export class AuthController {
   @Patch('profile')
   @ApiOperation({ summary: 'Update your own name and phone number' })
   @ApiResponse({ status: 200, description: 'The updated user' })
-  async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
+  async updateProfile(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.authService.updateProfile(req.user.userId, dto);
   }
 }

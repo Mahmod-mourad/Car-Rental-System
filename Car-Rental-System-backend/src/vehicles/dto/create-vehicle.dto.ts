@@ -14,7 +14,11 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-import { FuelType, TransmissionType, VehicleType } from '../../database/entities/vehicle.entity';
+import {
+  FuelType,
+  TransmissionType,
+  VehicleType,
+} from '../../database/entities/vehicle.entity';
 
 export class CoordinatesDto {
   @ApiProperty({ example: 30.0444 })
@@ -87,7 +91,10 @@ export class CreateVehicleDto {
   @MaxLength(50)
   color?: string;
 
-  @ApiPropertyOptional({ example: 45000, description: 'Odometer reading in kilometres' })
+  @ApiPropertyOptional({
+    example: 45000,
+    description: 'Odometer reading in kilometres',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -125,7 +132,8 @@ export class CreateVehicleDto {
 
   @ApiPropertyOptional({
     type: CoordinatesDto,
-    description: 'Pickup coordinates, stored as a PostGIS point for radius search',
+    description:
+      'Pickup coordinates, stored as a PostGIS point for radius search',
   })
   @IsOptional()
   @ValidateNested()

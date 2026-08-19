@@ -142,7 +142,9 @@ export class AuthService {
     userId: string,
     changes: { first_name?: string; last_name?: string; phone?: string },
   ): Promise<UserProfile> {
-    const profile = await this.profilesRepository.findOne({ where: { user_id: userId } });
+    const profile = await this.profilesRepository.findOne({
+      where: { user_id: userId },
+    });
 
     if (!profile) {
       throw new UnauthorizedException('Account no longer exists');
@@ -150,8 +152,10 @@ export class AuthService {
 
     // Only these three fields. Email and role are not editable from here — changing
     // your own role would be a straight privilege escalation.
-    if (changes.first_name !== undefined) profile.first_name = changes.first_name || null;
-    if (changes.last_name !== undefined) profile.last_name = changes.last_name || null;
+    if (changes.first_name !== undefined)
+      profile.first_name = changes.first_name || null;
+    if (changes.last_name !== undefined)
+      profile.last_name = changes.last_name || null;
     if (changes.phone !== undefined) profile.phone = changes.phone || null;
 
     await this.profilesRepository.save(profile);

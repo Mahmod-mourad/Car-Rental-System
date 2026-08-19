@@ -1,14 +1,12 @@
+import { PaymentMethod } from '../../database/entities/payment.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID, IsNotEmpty } from 'class-validator';
-
-// Define the payment method enum
-export enum PaymentMethod {
-  CREDIT_CARD = 'credit_card',
-  DEBIT_CARD = 'debit_card',
-  PAYPAL = 'paypal',
-  BANK_TRANSFER = 'bank_transfer',
-  OTHER = 'other',
-}
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class CreatePaymentDto {
   @ApiProperty({ description: 'ID of the booking this payment is for' })
@@ -23,7 +21,10 @@ export class CreatePaymentDto {
   @IsEnum(PaymentMethod)
   payment_method: PaymentMethod;
 
-  @ApiProperty({ required: false, description: 'Transaction ID from payment processor' })
+  @ApiProperty({
+    required: false,
+    description: 'Transaction ID from payment processor',
+  })
   @IsString()
   @IsOptional()
   transaction_id?: string;
@@ -32,3 +33,5 @@ export class CreatePaymentDto {
   @IsOptional()
   metadata?: Record<string, any>;
 }
+
+export { PaymentMethod };

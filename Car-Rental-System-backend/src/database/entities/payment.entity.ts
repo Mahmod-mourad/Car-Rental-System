@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Booking } from './booking.entity';
 
 export enum PaymentMethod {
@@ -44,7 +51,7 @@ export class Payment {
   @Column('jsonb', { nullable: true })
   metadata: Record<string, any>;
 
-  @Column('timestamp')
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
   @ManyToOne(() => Booking, (booking) => booking.payments)
