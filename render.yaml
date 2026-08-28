@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: carrental-api
+    runtime: node
+    plan: free
+    buildCommand: cd Car-Rental-System-backend && npm ci && npm run build
+    startCommand: cd Car-Rental-System-backend && npm run start:prod
+    rootDir: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DATABASE_HOST
+        sync: false
+      - key: DATABASE_PORT
+        value: 5432
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: DATABASE_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 1d
