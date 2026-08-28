@@ -16,6 +16,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -41,7 +42,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [
     AppService,
     {
