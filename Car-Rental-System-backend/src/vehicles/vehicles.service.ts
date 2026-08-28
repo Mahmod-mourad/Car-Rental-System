@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { Brackets, MoreThanOrEqual, Repository } from 'typeorm';
 import { createPoint } from '../common/types/postgis.types';
 import { Vehicle, VehicleType } from '../database/entities/vehicle.entity';
 import { User, UserRole } from '../database/entities/user.entity';
@@ -335,22 +335,17 @@ export class VehiclesService {
       .leftJoinAndSelect('vehicle.owner', 'owner')
       .where('vehicle.id != :vehicleId', { vehicleId })
       .andWhere('vehicle.available = :available', { available: true })
-      .andWhere((qb) => {
-        // Find vehicles with same type or same make
-        const subQuery = qb
-          .subQuery()
-          .select('v.id')
-          .from('vehicle', 'v')
-          .where('v.type = :type', { type: vehicle.type })
-          .orWhere('v.make = :make', { make: vehicle.make })
-          .andWhere('v.id != :vehicleId', { vehicleId })
-          .getQuery();
-        return `vehicle.id IN ${subQuery}`;
-      })
-      .orderBy(
-        '(SELECT AVG(r.rating) FROM review r WHERE r.vehicle_id = vehicle.id)',
-        'DESC',
+      // Brackets keeps the OR grouped so it reads (type = X OR make = Y) AND the
+      // outer conditions. A raw subQuery() here would leak unbound parameters.
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('vehicle.type = :type', { type: vehicle.type }).orWhere(
+            'vehicle.make = :make',
+            { make: vehicle.make },
+          );
+        }),
       )
+      .orderBy('vehicle.average_rating', 'DESC')
       .addOrderBy('vehicle.created_at', 'DESC')
       .take(limit)
       .getMany();
