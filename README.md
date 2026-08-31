@@ -4,8 +4,43 @@ A car rental platform: a NestJS API over PostgreSQL/PostGIS, and a Next.js web
 app in Arabic. Customers browse a fleet, search by location, book dates, and
 pay; staff manage vehicles, bookings and payments from an admin dashboard.
 
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)](https://nextjs.org)
+[![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-PostGIS-336791?logo=postgresql&logoColor=white)](https://postgis.net)
+[![Docker](https://img.shields.io/badge/deploy-Docker-2496ED?logo=docker&logoColor=white)](https://docker.com)
+[![JWT](https://img.shields.io/badge/auth-JWT-000000?logo=jsonwebtokens)](https://jwt.io)
+
 - **API** — NestJS 11, TypeORM, PostgreSQL 16 with PostGIS, JWT auth, Swagger
 - **Web** — Next.js 15, React 19, TypeScript, Tailwind, Radix UI, RTL Arabic
+
+---
+
+## Screenshots
+
+### Home
+
+![Home](docs/screenshots/home.png)
+
+*The Arabic RTL storefront — hero, search and featured fleet.*
+
+### Cars
+
+![Cars](docs/screenshots/cars.png)
+
+*The catalogue with filters — make, model, type, price, transmission, fuel and seats.*
+
+### Car detail
+
+![Car detail](docs/screenshots/car-detail.png)
+
+*A vehicle's specs, daily rate, reviews and similar cars.*
+
+### Swagger
+
+![Swagger](docs/screenshots/swagger.png)
+
+*The API fully documented — vehicles, bookings, payments, reviews and more.*
 
 ---
 
